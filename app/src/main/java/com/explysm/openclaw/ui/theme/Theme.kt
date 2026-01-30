@@ -58,7 +58,9 @@ fun OpenClawAndroidTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
+            window.navigationBarColor = colorScheme.primary.toArgb() // Set navigation bar color
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = darkTheme // Set navigation bar icon appearance
         }
     }
 
