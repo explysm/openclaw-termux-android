@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -31,26 +33,31 @@ class SettingsRepository(private val context: Context) {
         .map { preferences ->
             preferences[API_URL] ?: DEFAULT_API_URL
         }
-    
+        .flowOn(Dispatchers.IO)
+
     val pollInterval: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[POLL_INTERVAL] ?: DEFAULT_POLL_INTERVAL
         }
-    
+        .flowOn(Dispatchers.IO)
+
     val isDarkTheme: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[DARK_THEME] ?: false
         }
-    
+        .flowOn(Dispatchers.IO)
+
     val autoStart: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[AUTO_START] ?: false
         }
-    
+        .flowOn(Dispatchers.IO)
+
     val enableNotifications: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[ENABLE_NOTIFICATIONS] ?: true
         }
+        .flowOn(Dispatchers.IO)
     
     suspend fun setApiUrl(url: String) {
         context.dataStore.edit { preferences ->
@@ -86,6 +93,7 @@ class SettingsRepository(private val context: Context) {
         .map { preferences ->
             preferences[ONBOARDING_COMPLETED] ?: false
         }
+        .flowOn(Dispatchers.IO)
     
     suspend fun setOnboardingCompleted(completed: Boolean) {
         context.dataStore.edit { preferences ->
