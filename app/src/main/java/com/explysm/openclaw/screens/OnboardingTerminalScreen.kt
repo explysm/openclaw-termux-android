@@ -171,7 +171,8 @@ fun OnboardingTerminalScreen(navController: NavController) {
                 },
                 update = {
                     webViewRef[0] = it
-                    it.loadUrl("http://127.0.0.1:7681")
+                    // Don't reload URL here - it causes constant reconnections
+                    // The factory already loads the URL initially
                 }
             )
         }
