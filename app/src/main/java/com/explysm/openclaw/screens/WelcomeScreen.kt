@@ -40,8 +40,8 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
     val showLoading = onboardingCompleted || isNavigating
     
     // Auto-navigate if onboarding is already completed
-    LaunchedEffect(onboardingCompleted, hasNavigated, isNavigating) {
-        Logger.d("WelcomeScreen", "LaunchedEffect triggered. onboardingCompleted=$onboardingCompleted, hasNavigated=$hasNavigated, isNavigating=$isNavigating")
+    LaunchedEffect(onboardingCompleted) {
+        Logger.d("WelcomeScreen", "LaunchedEffect triggered for onboardingCompleted=$onboardingCompleted")
         if (onboardingCompleted && !hasNavigated && !isNavigating) {
             Logger.i("WelcomeScreen", "Auto-navigating to main screen (onboarding already completed)")
             isNavigating = true
@@ -50,6 +50,12 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
                 navController.navigate("main") {
                     popUpTo("welcome") { inclusive = true }
                 }
+                Logger.i("WelcomeScreen", "Navigation to main initiated successfully")
+            } catch (e: Exception) {
+                Logger.e("WelcomeScreen", "Navigation to main failed", e)
+            }
+        }
+    }
                 Logger.i("WelcomeScreen", "Navigation to main initiated successfully")
             } catch (e: Exception) {
                 Logger.e("WelcomeScreen", "Navigation to main failed", e)
