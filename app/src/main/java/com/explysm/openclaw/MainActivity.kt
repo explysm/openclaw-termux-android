@@ -24,15 +24,20 @@ import com.explysm.openclaw.screens.OnboardingTerminalScreen
 import com.explysm.openclaw.screens.SettingsScreen
 import com.explysm.openclaw.screens.WelcomeScreen
 import com.explysm.openclaw.ui.theme.OpenClawAndroidTheme
+import com.explysm.openclaw.utils.Logger
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        
+
+        // Initialize logger first
+        Logger.init(this)
+        Logger.i("MainActivity", "App starting up")
+
         // Keep splash screen visible until content is ready
         splashScreen.setKeepOnScreenCondition { false }
-        
+
         // Enable edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {

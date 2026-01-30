@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 
 import androidx.navigation.NavController
 import com.explysm.openclaw.data.SettingsRepository
+import com.explysm.openclaw.utils.Logger
 import com.explysm.openclaw.utils.TermuxRunner
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -54,27 +55,34 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
     var isRunCommandAvailable by remember { mutableStateOf<Boolean?>(null) }
     var showManualSetup by remember { mutableStateOf(false) }
 
+    Logger.i("OnboardingScreen", "OnboardingScreen composed")
+
     LaunchedEffect(Unit) {
+        Logger.i("OnboardingScreen", "Checking Termux RUN_COMMAND availability...")
         // Check if RUN_COMMAND is available
         val runCommandAvailable = TermuxRunner.isRunCommandAvailable(context)
         isRunCommandAvailable = runCommandAvailable
         
         if (runCommandAvailable) {
+            Logger.i("OnboardingScreen", "RUN_COMMAND available, running setup commands")
             // Run initial setup script
-            TermuxRunner.runCommand(
+            val setupResult = TermuxRunner.runCommand(
                 context,
                 "export ANDROID_APP=1 && curl -s https://explysm.github.io/moltbot-termux/install.sh | sh",
                 "OpenClaw Setup",
                 background = true
             )
+            Logger.d("OnboardingScreen", "Setup command result: $setupResult")
             // Chain with ttyd for onboarding
-            TermuxRunner.runCommand(
+            val ttydResult = TermuxRunner.runCommand(
                 context,
                 "pkg install ttyd -y && ttyd -p 7681 --interface 127.0.0.1 --writable --once bash -c \"moltbot onboard\"",
                 "OpenClaw Onboarding",
                 background = false // Keep this in foreground for user to see
             )
+            Logger.d("OnboardingScreen", "TTYD command result: $ttydResult")
         } else {
+            Logger.w("OnboardingScreen", "RUN_COMMAND not available, showing manual setup UI")
             // Show manual setup UI
             showManualSetup = true
         }
@@ -83,6 +91,7 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             isRunCommandAvailable == null -> {
+                Logger.d("OnboardingScreen", "Showing loading state while checking setup")
                 // Loading state
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -93,7 +102,7 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
                 }
             }
             showManualSetup -> {
-                // Manual setup UI
+                Logger.i("OnboardingScreen", "Showing manual setup UI")
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -212,6 +221,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                     
                     Button(
                         onClick = {
+                            Logger.i("OnboardingScreen", "Open Termux button clicked")
                             TermuxRunner.openTermuxApp(context)
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -229,15 +239,22 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                 }
             }
             else -> {
+                Logger.i("OnboardingScreen", "Automatic setup - preparing to navigate to terminal")
                 // Automatic setup - navigate to terminal screen after brief delay
                 var hasNavigated by remember { mutableStateOf(false) }
                 
                 LaunchedEffect(Unit) {
                     if (!hasNavigated) {
+                        Logger.i("OnboardingScreen", "Auto-navigating to onboarding_terminal after delay")
                         hasNavigated = true
                         delay(2000) // Give time for ttyd to start
-                        navController.navigate("onboarding_terminal") {
-                            popUpTo("onboarding") { inclusive = true }
+                        try {
+                            navController.navigate("onboarding_terminal") {
+                                popUpTo("onboarding") { inclusive = true }
+                            }
+                            Logger.i("OnboardingScreen", "Navigation to onboarding_terminal succeeded")
+                        } catch (e: Exception) {
+                            Logger.e("OnboardingScreen", "Navigation to onboarding_terminal failed", e)
                         }
                     }
                 }
@@ -259,19 +276,28 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
         if (isRunCommandAvailable != null) {
             FloatingActionButton(
                 onClick = {
+                    Logger.i("OnboardingScreen", "Done/Continue button clicked. showManualSetup=$showManualSetup")
                     if (showManualSetup) {
                         // Manual setup: go to terminal first
+                        Logger.i("OnboardingScreen", "Navigating to onboarding_terminal (manual setup)")
                         navController.navigate("onboarding_terminal") {
                             popUpTo("onboarding") { inclusive = true }
                         }
                     } else {
                         // Automatic setup: skip terminal, go to main
+                        Logger.i("OnboardingScreen", "Completing onboarding and navigating to main")
                         scope.launch {
-                            // Save onboarding completed FIRST to prevent race condition
-                            settingsRepository.setOnboardingCompleted(true)
-                            // Then navigate - clear entire back stack since start destination might not exist
-                            navController.navigate("main") {
-                                popUpTo(0) { inclusive = true }
+                            try {
+                                // Save onboarding completed FIRST to prevent race condition
+                                settingsRepository.setOnboardingCompleted(true)
+                                Logger.i("OnboardingScreen", "Onboarding marked as completed in DataStore")
+                                // Then navigate - clear entire back stack since start destination might not exist
+                                navController.navigate("main") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                                Logger.i("OnboardingScreen", "Navigation to main succeeded")
+                            } catch (e: Exception) {
+                                Logger.e("OnboardingScreen", "Error during onboarding completion", e)
                             }
                         }
                     }
