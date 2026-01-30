@@ -1,8 +1,10 @@
 package com.explysm.openclaw.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -29,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
@@ -39,18 +43,19 @@ import androidx.navigation.NavController
 fun OnboardingTerminalScreen(navController: NavController) {
     val webViewRef = remember { mutableListOf<WebView?>(null) }
     
-    fun sendKey(keyCode: String) {
+    fun sendKey(key: String, isArrow: Boolean = true) {
         webViewRef[0]?.evaluateJavascript(
             """
             (function() {
                 const event = new KeyboardEvent('keydown', {
-                    key: '$keyCode',
-                    code: 'Arrow$keyCode',
-                    keyCode: ${when(keyCode) {
+                    key: '$key',
+                    code: '${if (isArrow) "Arrow$key" else key}',
+                    keyCode: ${when(key) {
                         "Up" -> "38"
                         "Down" -> "40"
                         "Left" -> "37"
                         "Right" -> "39"
+                        "Enter" -> "13"
                         else -> "0"
                     }},
                     bubbles: true
@@ -61,6 +66,14 @@ fun OnboardingTerminalScreen(navController: NavController) {
         )
     }
     
+    fun openKeyboard(context: Context) {
+        webViewRef[0]?.let { webView ->
+            webView.requestFocus()
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,15 +81,36 @@ fun OnboardingTerminalScreen(navController: NavController) {
             )
         },
         bottomBar = {
+            val context = LocalContext.current
+            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Arrow keys row
+                // First row: Keyboard and Enter buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Keyboard button to open system keyboard
+                    IconButton(onClick = { openKeyboard(context) }) {
+                        Icon(Icons.Default.Keyboard, contentDescription = "Open Keyboard")
+                    }
+                    
+                    // Enter key button
+                    Button(onClick = { sendKey("Enter", isArrow = false) }) {
+                        Text("Enter")
+                    }
+                }
+                
+                // Second row: Arrow keys
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -96,6 +130,7 @@ fun OnboardingTerminalScreen(navController: NavController) {
                     }
                 }
                 
+                // Continue button
                 Button(
                     onClick = {
                         navController.navigate("main") {
