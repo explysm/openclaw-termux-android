@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -359,6 +360,7 @@ fun SettingsScreen(navController: NavController, settingsRepository: SettingsRep
                                 .fillMaxWidth()
                                 .padding(8.dp)
                         )
+                    }
                 }
             }
             
@@ -375,7 +377,7 @@ fun SettingsScreen(navController: NavController, settingsRepository: SettingsRep
 }
 
 @Composable
-private fun SettingSwitch(
+fun SettingSwitch(
     title: String,
     subtitle: String,
     checked: Boolean,

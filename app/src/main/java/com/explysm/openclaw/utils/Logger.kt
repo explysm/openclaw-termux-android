@@ -18,7 +18,7 @@ object Logger {
         try {
             val logsDir = File(context.filesDir, "logs").apply { mkdirs() }
             logFile = File(logsDir, "app.log")
-            info("Logger initialized. Log file: ${logFile?.absolutePath}")
+            i("Logger", "Logger initialized. Log file: ${logFile?.absolutePath}")
         } catch (e: Exception) {
             android.util.Log.e("OpenClawLogger", "Failed to initialize logger", e)
         }
@@ -93,7 +93,6 @@ object Logger {
     fun clearLogs() {
         try {
             logFile?.writeText("")
-            i("Logger", "Logs cleared")
         } catch (e: Exception) {
             e("Logger", "Failed to clear logs", e)
         }
