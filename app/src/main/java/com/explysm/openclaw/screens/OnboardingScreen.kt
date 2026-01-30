@@ -31,7 +31,7 @@ fun OnboardingScreen(navController: NavController) {
         // Run initial setup script
         TermuxRunner.runCommand(
             context,
-            "curl -s https://explysm.github.io/moltbot-termux/install.sh | sh",
+            "export ANDROID_APP=1 && curl -s https://explysm.github.io/moltbot-termux/install.sh | sh",
             "OpenClaw Setup",
             background = true
         )
