@@ -14,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +34,6 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
 
     Logger.i("WelcomeScreen", "WelcomeScreen composed. onboardingCompleted=$onboardingCompleted, hasNavigated=$hasNavigated, isNavigating=$isNavigating")
 
-    // Show loading while checking or navigating - render this but DON'T return early
-    // so that LaunchedEffect can still run
-    val showLoading = onboardingCompleted || isNavigating
-    
     // Auto-navigate if onboarding is already completed
     LaunchedEffect(onboardingCompleted) {
         Logger.d("WelcomeScreen", "LaunchedEffect triggered for onboardingCompleted=$onboardingCompleted")
@@ -56,15 +51,9 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
             }
         }
     }
-                Logger.i("WelcomeScreen", "Navigation to main initiated successfully")
-            } catch (e: Exception) {
-                Logger.e("WelcomeScreen", "Navigation to main failed", e)
-            }
-        }
-    }
 
-    // Show loading UI if needed
-    if (showLoading) {
+    // Show loading while checking or navigating
+    if (onboardingCompleted || isNavigating) {
         Logger.d("WelcomeScreen", "Showing loading state (onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating)")
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -75,7 +64,8 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
             Spacer(modifier = Modifier.height(16.dp))
             Text("Loading...")
         }
-    } else {
+        return
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -106,6 +96,5 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
         }) {
             Text(text = "Install & Onboard")
         }
-    }
     }
 }
