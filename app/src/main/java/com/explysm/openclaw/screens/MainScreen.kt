@@ -40,7 +40,7 @@ fun MainScreen(navController: NavController) {
                 Toast.makeText(context, "API Start failed, falling back to Termux: ${e.message}", Toast.LENGTH_LONG).show()
                 TermuxRunner.runCommand(
                     context,
-                    "moltbot gateway --port 18789 --verbose &",
+                    "moltbot --android-app &",
                     "OpenClaw Gateway",
                     background = true
                 )
@@ -68,6 +68,30 @@ fun MainScreen(navController: NavController) {
     }
 
     LaunchedEffect(Unit) {
+        // Initial check and start of moltbot --android-app if not running
+        ApiClient.get("http://127.0.0.1:5039/api/status") { result ->
+            result.onSuccess {
+                if (!it.contains("running", ignoreCase = true)) {
+                    TermuxRunner.runCommand(
+                        context,
+                        "moltbot --android-app &",
+                        "OpenClaw Background Service",
+                        background = true
+                    )
+                    Toast.makeText(context, "Attempting to start OpenClaw service...", Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure {
+                // Assume not running if API is unreachable, try to start
+                TermuxRunner.runCommand(
+                    context,
+                    "moltbot --android-app &",
+                    "OpenClaw Background Service",
+                    background = true
+                )
+                Toast.makeText(context, "API unreachable, attempting to start OpenClaw service...", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // Poll status every 10 seconds
         while (true) {
             ApiClient.get("http://127.0.0.1:5039/api/status") { result ->
