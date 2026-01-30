@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("com.google.android.material:material:1.11.0") // Added for Material3 themes resolution
 
     // For WebView
     implementation("androidx.webkit:webkit:1.9.0")
