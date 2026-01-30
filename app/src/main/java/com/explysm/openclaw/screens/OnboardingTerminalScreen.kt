@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -96,8 +95,8 @@ fun OnboardingTerminalScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Keyboard button to open system keyboard
-                    IconButton(onClick = { openKeyboard(context) }) {
-                        Icon(Icons.Default.Keyboard, contentDescription = "Open Keyboard")
+                    Button(onClick = { openKeyboard(context) }) {
+                        Text("Keyboard")
                     }
                     
                     // Enter key button
