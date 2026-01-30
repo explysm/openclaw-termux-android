@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.explysm.openclaw.utils.TermuxRunner
+import com.explysm.openclaw.utils.ApiClient
 import kotlinx.coroutines.delay
 
 @SuppressLint("SetJavaScriptEnabled")
