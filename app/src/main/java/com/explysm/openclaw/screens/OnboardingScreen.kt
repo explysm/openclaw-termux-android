@@ -20,14 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -135,7 +134,7 @@ fun OnboardingScreen(navController: NavController) {
                                     "Installation Commands:",
                                     style = MaterialTheme.typography.titleMedium
                                 )
-                                IconButton(
+                                TextButton(
                                     onClick = {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         val commands = """export ANDROID_APP=1
@@ -144,7 +143,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh"""
                                         clipboard.setPrimaryClip(clip)
                                     }
                                 ) {
-                                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copy commands")
+                                    Text("Copy")
                                 }
                             }
                             
@@ -183,7 +182,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                                     "Then run onboarding:",
                                     style = MaterialTheme.typography.titleMedium
                                 )
-                                IconButton(
+                                TextButton(
                                     onClick = {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         val command = """pkg install ttyd -y && ttyd -p 7681 --interface 127.0.0.1 --writable --once bash -c "moltbot onboard""""
@@ -191,7 +190,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                                         clipboard.setPrimaryClip(clip)
                                     }
                                 ) {
-                                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copy command")
+                                    Text("Copy")
                                 }
                             }
                             
