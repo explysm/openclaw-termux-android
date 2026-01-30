@@ -1,5 +1,6 @@
 package com.explysm.openclaw.utils
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -44,7 +45,7 @@ object TermuxRunner {
         background: Boolean = true,
         failOnError: Boolean = false,
         workingDirectory: String? = null
-    ) {
+    ): Boolean {
         if (!isTermuxInstalled(context)) {
             Toast.makeText(context, "Termux is not installed. Please install Termux from F-Droid.", Toast.LENGTH_LONG).show()
             // Try Play Store first, fall back to browser
@@ -60,11 +61,11 @@ object TermuxRunner {
             } catch (e: Exception) {
                 context.startActivity(webIntent)
             }
-            return
+            return false
         }
 
         val intent = Intent(ACTION_RUN_COMMAND).apply {
-            putExtra(EXTRA_COMMAND_PATH, "bash")
+            putExtra(EXTRA_COMMAND_PATH, "/data/data/com.termux/files/usr/bin/bash")
             putExtra(EXTRA_ARGUMENTS, arrayOf("-c", command))
             putExtra(EXTRA_BACKGROUND, background)
             putExtra(EXTRA_NOTIFICATION_TITLE, notificationTitle)
@@ -72,7 +73,8 @@ object TermuxRunner {
             workingDirectory?.let {
                 putExtra(EXTRA_WORKDIR, it)
             }
-            setPackage(TERMUX_PACKAGE_NAME) // Explicitly target Termux app
+            setPackage(TERMUX_PACKAGE_NAME)
+            component = ComponentName(TERMUX_PACKAGE_NAME, "com.termux.app.TermuxServiceReceiver")
         }
         try {
             // Check if Termux can handle this intent
@@ -84,15 +86,18 @@ object TermuxRunner {
                 // For background commands, broadcast to Termux service receiver
                 context.sendBroadcast(intent)
                 Toast.makeText(context, "Termux background command sent.", Toast.LENGTH_SHORT).show()
+                return true
             } else {
                 // For foreground commands, launch Termux activity
                 context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 Toast.makeText(context, "Termux foreground command launched.", Toast.LENGTH_SHORT).show()
+                return true
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to run Termux command: ${e.message}", Toast.LENGTH_LONG).show()
             // Fallback: Launch Termux app directly so user can run commands manually
             openTermuxApp(context)
+            return false
         }
     }
 

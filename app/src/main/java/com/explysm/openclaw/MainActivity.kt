@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import com.explysm.openclaw.data.SettingsRepository
 import com.explysm.openclaw.screens.MainScreen
 import com.explysm.openclaw.screens.OnboardingScreen
+import com.explysm.openclaw.screens.OnboardingTerminalScreen
 import com.explysm.openclaw.screens.SettingsScreen
 import com.explysm.openclaw.screens.WelcomeScreen
 import com.explysm.openclaw.ui.theme.OpenClawAndroidTheme
@@ -61,6 +62,9 @@ fun OpenClawApp(settingsRepository: SettingsRepository) {
         }
         composable("onboarding") {
             OnboardingScreen(navController = navController)
+        }
+        composable("onboarding_terminal") {
+            OnboardingTerminalScreen(navController = navController)
         }
         composable("main") {
             MainScreen(navController = navController, settingsRepository = settingsRepository)

@@ -4,10 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.graphics.Bitmap
-import android.view.ViewGroup
-import android.webkit.WebView
-import android.webkit.WebViewClient
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +21,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
@@ -32,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,7 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+
 import androidx.navigation.NavController
 import com.explysm.openclaw.utils.TermuxRunner
 
@@ -219,50 +218,55 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
-                        "After running the commands in Termux, return here and tap Continue",
+                        "After running the commands in Termux, return here and tap the checkmark button",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             else -> {
-                // WebView for automatic setup
-                AndroidView(factory = {
-                    WebView(it).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                // TODO: Potentially monitor URL changes or add a timer to detect onboarding completion
-                            }
-                        }
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.allowFileAccess = true
-                        loadUrl("http://127.0.0.1:7681")
+                // Automatic setup - navigate to terminal screen after brief delay
+                LaunchedEffect(Unit) {
+                    delay(2000) // Give time for ttyd to start
+                    navController.navigate("onboarding_terminal") {
+                        popUpTo("onboarding") { inclusive = true }
                     }
-                }, update = {
-                    it.loadUrl("http://127.0.0.1:7681")
-                })
+                }
+                
+                // Show loading while preparing terminal
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Starting onboarding terminal...")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator()
+                }
             }
         }
 
-        // Show Done button only when not in manual setup or after manual setup
+        // Show Done/Continue button
         if (isRunCommandAvailable != null) {
             FloatingActionButton(
                 onClick = {
-                    navController.navigate("main") {
-                        popUpTo("onboarding") { inclusive = true }
+                    if (showManualSetup) {
+                        // Manual setup: go to terminal first
+                        navController.navigate("onboarding_terminal") {
+                            popUpTo("onboarding") { inclusive = true }
+                        }
+                    } else {
+                        // Automatic setup: skip terminal, go to main
+                        navController.navigate("main") {
+                            popUpTo("onboarding") { inclusive = true }
+                        }
                     }
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                Icon(Icons.Filled.Done, "Done")
+                Icon(Icons.Filled.Done, if (showManualSetup) "Continue" else "Done")
             }
         }
     }
