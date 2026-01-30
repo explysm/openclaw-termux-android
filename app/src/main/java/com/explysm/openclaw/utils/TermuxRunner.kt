@@ -45,7 +45,6 @@ object TermuxRunner {
         }
 
         val intent = Intent(ACTION_RUN_COMMAND).apply {
-            setClassName(TERMUX_PACKAGE_NAME, TERMUX_SERVICE)
             putExtra(EXTRA_COMMAND_PATH, "bash")
             putExtra(EXTRA_ARGUMENTS, arrayOf("-c", command))
             putExtra(EXTRA_BACKGROUND, background)
@@ -54,14 +53,15 @@ object TermuxRunner {
             workingDirectory?.let {
                 putExtra(EXTRA_WORKDIR, it)
             }
+            setPackage(TERMUX_PACKAGE_NAME) // Explicitly target Termux app
         }
         try {
             if (background) {
-                // For background commands, try sending as a broadcast
+                // For background commands, broadcast to Termux service receiver
                 context.sendBroadcast(intent)
                 Toast.makeText(context, "Termux background command sent.", Toast.LENGTH_SHORT).show()
             } else {
-                // For foreground commands or as a fallback, launch Termux directly
+                // For foreground commands, launch Termux activity
                 context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 Toast.makeText(context, "Termux foreground command launched.", Toast.LENGTH_SHORT).show()
             }
