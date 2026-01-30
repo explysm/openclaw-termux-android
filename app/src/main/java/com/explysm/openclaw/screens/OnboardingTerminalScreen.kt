@@ -186,12 +186,13 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                 // Continue button
                 Button(
                     onClick = {
-                        // Mark onboarding as completed
                         scope.launch {
-                            settingsRepository.setOnboardingCompleted(true)
+                            // Navigate FIRST to avoid race condition with WelcomeScreen
                             navController.navigate("main") {
-                                popUpTo("onboarding_terminal") { inclusive = true }
+                                popUpTo("welcome") { inclusive = true }
                             }
+                            // THEN save onboarding completed
+                            settingsRepository.setOnboardingCompleted(true)
                         }
                     },
                     modifier = Modifier.padding(top = 8.dp)

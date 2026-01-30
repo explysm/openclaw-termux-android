@@ -374,15 +374,21 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                     )
                 ) {
                     AndroidView(
-                        factory = {
-                            WebView(it).apply {
+                        factory = { ctx ->
+                            WebView(ctx).apply {
                                 layoutParams = ViewGroup.LayoutParams(
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
                                 webViewClient = object : WebViewClient() {
-                                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                        super.onPageStarted(view, url, favicon)
+                                    override fun onReceivedError(
+                                        view: WebView?,
+                                        errorCode: Int,
+                                        description: String?,
+                                        failingUrl: String?
+                                    ) {
+                                        // Suppress WebView errors - ttyd may not be running yet
+                                        // This prevents crashes when the local server is unavailable
                                     }
                                 }
                                 settings.javaScriptEnabled = true

@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,10 +28,12 @@ import com.explysm.openclaw.utils.TermuxRunner
 fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
     val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = false)
+    var hasNavigated by remember { mutableStateOf(false) }
 
     // Auto-navigate if onboarding is already completed
     LaunchedEffect(onboardingCompleted) {
-        if (onboardingCompleted) {
+        if (onboardingCompleted && !hasNavigated) {
+            hasNavigated = true
             navController.navigate("main") {
                 popUpTo("welcome") { inclusive = true }
             }
