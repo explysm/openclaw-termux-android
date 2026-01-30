@@ -8,4 +8,21 @@
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
     </style>
+    
+    <!-- Splash screen theme for Android 12+ -->
+    <style name="Theme.OpenClawAndroid.Starting" parent="Theme.SplashScreen">
+        <!-- Window background -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        
+        <!-- Animated icon (required for Android 12+) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        
+        <!-- Status/navigation bar colors during splash -->
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        
+        <!-- Theme to use after splash screen -->
+        <item name="postSplashScreenTheme">@style/Theme.OpenClawAndroid</item>
+    </style>
 </resources>

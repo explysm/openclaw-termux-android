@@ -60,12 +60,21 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("com.google.android.material:material:1.11.0") // Added for Material3 themes resolution
+    implementation("com.google.android.material:material:1.11.0")
 
     // For WebView
     implementation("androidx.webkit:webkit:1.9.0")
     // OkHttp for API calls
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    
+    // DataStore for preferences
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    
+    // Splash Screen API
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    
+    // Pull to refresh
+    implementation("androidx.compose.material:material:1.6.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

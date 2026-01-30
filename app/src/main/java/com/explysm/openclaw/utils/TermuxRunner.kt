@@ -29,6 +29,14 @@ object TermuxRunner {
         }
     }
 
+    fun isRunCommandAvailable(context: Context): Boolean {
+        if (!isTermuxInstalled(context)) return false
+        val intent = Intent(ACTION_RUN_COMMAND).apply {
+            setPackage(TERMUX_PACKAGE_NAME)
+        }
+        return intent.resolveActivity(context.packageManager) != null
+    }
+
     fun runCommand(
         context: Context,
         command: String,
@@ -38,9 +46,20 @@ object TermuxRunner {
         workingDirectory: String? = null
     ) {
         if (!isTermuxInstalled(context)) {
-            Toast.makeText(context, "Termux is not installed.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Termux is not installed. Please install Termux from F-Droid.", Toast.LENGTH_LONG).show()
+            // Try Play Store first, fall back to browser
             val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$TERMUX_PACKAGE_NAME"))
-            context.startActivity(marketIntent)
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/$TERMUX_PACKAGE_NAME/"))
+            
+            try {
+                if (marketIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(marketIntent)
+                } else {
+                    context.startActivity(webIntent)
+                }
+            } catch (e: Exception) {
+                context.startActivity(webIntent)
+            }
             return
         }
 
@@ -56,6 +75,11 @@ object TermuxRunner {
             setPackage(TERMUX_PACKAGE_NAME) // Explicitly target Termux app
         }
         try {
+            // Check if Termux can handle this intent
+            if (intent.resolveActivity(context.packageManager) == null) {
+                throw Exception("Termux RUN_COMMAND not available. Please ensure Termux and Termux:API are properly installed.")
+            }
+            
             if (background) {
                 // For background commands, broadcast to Termux service receiver
                 context.sendBroadcast(intent)
@@ -67,11 +91,19 @@ object TermuxRunner {
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to run Termux command: ${e.message}", Toast.LENGTH_LONG).show()
-            // Fallback: Launch Termux app if the above fails
-            val launchAppIntent = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE_NAME)
-            launchAppIntent?.let {
-                context.startActivity(it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+            // Fallback: Launch Termux app directly so user can run commands manually
+            openTermuxApp(context)
+        }
+    }
+
+    fun openTermuxApp(context: Context): Boolean {
+        val launchAppIntent = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE_NAME)
+        return if (launchAppIntent?.resolveActivity(context.packageManager) != null) {
+            context.startActivity(launchAppIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } else {
+            Toast.makeText(context, "Cannot launch Termux. Please open Termux manually.", Toast.LENGTH_LONG).show()
+            false
         }
     }
 }

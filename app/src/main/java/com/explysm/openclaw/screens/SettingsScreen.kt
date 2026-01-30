@@ -1,0 +1,251 @@
+package com.explysm.openclaw.screens
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.explysm.openclaw.data.SettingsRepository
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(navController: NavController) {
+    val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context) }
+    val scope = rememberCoroutineScope()
+    
+    val apiUrl by settingsRepository.apiUrl.collectAsState(initial = SettingsRepository.DEFAULT_API_URL)
+    val pollInterval by settingsRepository.pollInterval.collectAsState(initial = SettingsRepository.DEFAULT_POLL_INTERVAL)
+    val isDarkTheme by settingsRepository.isDarkTheme.collectAsState(initial = false)
+    val autoStart by settingsRepository.autoStart.collectAsState(initial = false)
+    val enableNotifications by settingsRepository.enableNotifications.collectAsState(initial = true)
+    
+    var apiUrlInput by remember { mutableStateOf(apiUrl) }
+    var pollIntervalInput by remember { mutableStateOf(pollInterval.toString()) }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // API Settings
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "API Configuration",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedTextField(
+                        value = apiUrlInput,
+                        onValueChange = { 
+                            apiUrlInput = it
+                            scope.launch {
+                                settingsRepository.setApiUrl(it)
+                            }
+                        },
+                        label = { Text("API Base URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    OutlinedTextField(
+                        value = pollIntervalInput,
+                        onValueChange = { 
+                            pollIntervalInput = it
+                            it.toIntOrNull()?.let { interval ->
+                                scope.launch {
+                                    settingsRepository.setPollInterval(interval)
+                                }
+                            }
+                        },
+                        label = { Text("Poll Interval (seconds)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Appearance Settings
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "Appearance",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    SettingSwitch(
+                        title = "Dark Theme",
+                        subtitle = "Enable dark mode throughout the app",
+                        checked = isDarkTheme,
+                        onCheckedChange = { 
+                            scope.launch {
+                                settingsRepository.setDarkTheme(it)
+                            }
+                        }
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Behavior Settings
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        "Behavior",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    SettingSwitch(
+                        title = "Auto-start Service",
+                        subtitle = "Automatically start OpenClaw when app opens",
+                        checked = autoStart,
+                        onCheckedChange = { 
+                            scope.launch {
+                                settingsRepository.setAutoStart(it)
+                            }
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    SettingSwitch(
+                        title = "Enable Notifications",
+                        subtitle = "Show notifications for service status",
+                        checked = enableNotifications,
+                        onCheckedChange = { 
+                            scope.launch {
+                                settingsRepository.setEnableNotifications(it)
+                            }
+                        }
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                "Version 1.0",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitch(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
