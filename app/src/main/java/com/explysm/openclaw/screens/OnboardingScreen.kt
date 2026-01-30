@@ -30,10 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,12 +43,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
 import androidx.navigation.NavController
+import com.explysm.openclaw.data.SettingsRepository
 import com.explysm.openclaw.utils.TermuxRunner
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun OnboardingScreen(navController: NavController) {
+fun OnboardingScreen(navController: NavController, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var isRunCommandAvailable by remember { mutableStateOf<Boolean?>(null) }
     var showManualSetup by remember { mutableStateOf(false) }
 
@@ -257,8 +261,13 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                         }
                     } else {
                         // Automatic setup: skip terminal, go to main
-                        navController.navigate("main") {
-                            popUpTo("onboarding") { inclusive = true }
+                        scope.launch {
+                            // Save onboarding completed FIRST to prevent race condition
+                            settingsRepository.setOnboardingCompleted(true)
+                            // Then navigate
+                            navController.navigate("main") {
+                                popUpTo("welcome") { inclusive = true }
+                            }
                         }
                     }
                 },

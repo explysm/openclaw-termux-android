@@ -61,7 +61,7 @@ fun OpenClawApp(settingsRepository: SettingsRepository) {
             WelcomeScreen(navController = navController, settingsRepository = settingsRepository)
         }
         composable("onboarding") {
-            OnboardingScreen(navController = navController)
+            OnboardingScreen(navController = navController, settingsRepository = settingsRepository)
         }
         composable("onboarding_terminal") {
             OnboardingTerminalScreen(navController = navController, settingsRepository = settingsRepository)

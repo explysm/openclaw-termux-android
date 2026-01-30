@@ -84,14 +84,22 @@ object TermuxRunner {
             
             if (background) {
                 // For background commands, broadcast to Termux service receiver
-                context.sendBroadcast(intent)
-                Toast.makeText(context, "Termux background command sent.", Toast.LENGTH_SHORT).show()
-                return true
+                try {
+                    context.sendBroadcast(intent)
+                    Toast.makeText(context, "Termux background command sent.", Toast.LENGTH_SHORT).show()
+                    return true
+                } catch (e: Exception) {
+                    throw Exception("Failed to send broadcast: ${e.message}")
+                }
             } else {
                 // For foreground commands, launch Termux activity
-                context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                Toast.makeText(context, "Termux foreground command launched.", Toast.LENGTH_SHORT).show()
-                return true
+                try {
+                    context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    Toast.makeText(context, "Termux foreground command launched.", Toast.LENGTH_SHORT).show()
+                    return true
+                } catch (e: Exception) {
+                    throw Exception("Failed to start activity: ${e.message}")
+                }
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to run Termux command: ${e.message}", Toast.LENGTH_LONG).show()
@@ -102,12 +110,17 @@ object TermuxRunner {
     }
 
     fun openTermuxApp(context: Context): Boolean {
-        val launchAppIntent = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE_NAME)
-        return if (launchAppIntent?.resolveActivity(context.packageManager) != null) {
-            context.startActivity(launchAppIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            true
-        } else {
-            Toast.makeText(context, "Cannot launch Termux. Please open Termux manually.", Toast.LENGTH_LONG).show()
+        return try {
+            val launchAppIntent = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE_NAME)
+            if (launchAppIntent?.resolveActivity(context.packageManager) != null) {
+                context.startActivity(launchAppIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            } else {
+                Toast.makeText(context, "Cannot launch Termux. Please open Termux manually.", Toast.LENGTH_LONG).show()
+                false
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to open Termux: ${e.message}", Toast.LENGTH_LONG).show()
             false
         }
     }

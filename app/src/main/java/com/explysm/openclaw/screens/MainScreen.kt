@@ -276,29 +276,37 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                 
                 Button(
                     onClick = {
-                        ApiClient.post("$apiUrl/api/start", "") { result ->
-                            result.onSuccess {
-                                status = "Running"
-                                Toast.makeText(context, "OpenClaw started.", Toast.LENGTH_SHORT).show()
-                            }.onFailure { e ->
-                                Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
-                                val success = TermuxRunner.runCommand(
-                                    context,
-                                    "moltbot --android-app &",
-                                    "OpenClaw Gateway",
-                                    background = true
-                                )
-                                if (success) {
-                                    Toast.makeText(context, "Command sent to Termux. Checking status...", Toast.LENGTH_SHORT).show()
-                                    // Wait a moment then check if it actually started
-                                    scope.launch {
-                                        delay(3000)
-                                        refreshStatus()
+                        try {
+                            ApiClient.post("$apiUrl/api/start", "") { result ->
+                                result.onSuccess {
+                                    status = "Running"
+                                    Toast.makeText(context, "OpenClaw started.", Toast.LENGTH_SHORT).show()
+                                }.onFailure { e ->
+                                    Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val success = TermuxRunner.runCommand(
+                                            context,
+                                            "moltbot --android-app &",
+                                            "OpenClaw Gateway",
+                                            background = true
+                                        )
+                                        if (success) {
+                                            Toast.makeText(context, "Command sent to Termux. Checking status...", Toast.LENGTH_SHORT).show()
+                                            // Wait a moment then check if it actually started
+                                            scope.launch {
+                                                delay(3000)
+                                                refreshStatus()
+                                            }
+                                        } else {
+                                            Toast.makeText(context, "Failed to send command to Termux", Toast.LENGTH_LONG).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                                     }
-                                } else {
-                                    Toast.makeText(context, "Failed to send command to Termux", Toast.LENGTH_LONG).show()
                                 }
                             }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error starting bot: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -310,24 +318,32 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                 
                 Button(
                     onClick = {
-                        ApiClient.post("$apiUrl/api/stop", "") { result ->
-                            result.onSuccess {
-                                status = "Stopped"
-                                Toast.makeText(context, "OpenClaw stopped.", Toast.LENGTH_SHORT).show()
-                            }.onFailure { e ->
-                                Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
-                                val success = TermuxRunner.runCommand(
-                                    context,
-                                    "pkill -f \"moltbot gateway\"",
-                                    "Stop OpenClaw Gateway",
-                                    background = true
-                                )
-                                if (success) {
-                                    Toast.makeText(context, "Stop command sent to Termux", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Failed to send stop command", Toast.LENGTH_LONG).show()
+                        try {
+                            ApiClient.post("$apiUrl/api/stop", "") { result ->
+                                result.onSuccess {
+                                    status = "Stopped"
+                                    Toast.makeText(context, "OpenClaw stopped.", Toast.LENGTH_SHORT).show()
+                                }.onFailure { e ->
+                                    Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val success = TermuxRunner.runCommand(
+                                            context,
+                                            "pkill -f \"moltbot gateway\"",
+                                            "Stop OpenClaw Gateway",
+                                            background = true
+                                        )
+                                        if (success) {
+                                            Toast.makeText(context, "Stop command sent to Termux", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to send stop command", Toast.LENGTH_LONG).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error stopping bot: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
