@@ -31,32 +31,51 @@ fun MainScreen(navController: NavController) {
 
     // Placeholder for API calls - will be replaced by actual ApiClient later
     val startOpenClaw: () -> Unit = {
-        // Fallback to Termux command if API is not available/implemented yet
-        TermuxRunner.runCommand(
-            context,
-            "moltbot gateway --port 18789 --verbose &", // Run in background
-            "OpenClaw Gateway",
-            background = true
-        )
-        status = "Running"
-        Toast.makeText(context, "Starting OpenClaw gateway...", Toast.LENGTH_SHORT).show()
+        ApiClient.post("http://127.0.0.1:5039/api/start", "") { result ->
+            result.onSuccess {
+                status = "Running"
+                Toast.makeText(context, "OpenClaw started via API.", Toast.LENGTH_SHORT).show()
+            }.onFailure { e ->
+                Toast.makeText(context, "API Start failed, falling back to Termux: ${e.message}", Toast.LENGTH_LONG).show()
+                TermuxRunner.runCommand(
+                    context,
+                    "moltbot gateway --port 18789 --verbose &",
+                    "OpenClaw Gateway",
+                    background = true
+                )
+                status = "Running"
+            }
+        }
     }
 
     val stopOpenClaw: () -> Unit = {
-        TermuxRunner.runCommand(
-            context,
-            "pkill -f \"moltbot gateway\"",
-            "Stop OpenClaw Gateway",
-            background = true
-        )
-        status = "Stopped"
-        Toast.makeText(context, "Stopping OpenClaw gateway...", Toast.LENGTH_SHORT).show()
+        ApiClient.post("http://127.0.0.1:5039/api/stop", "") { result ->
+            result.onSuccess {
+                status = "Stopped"
+                Toast.makeText(context, "OpenClaw stopped via API.", Toast.LENGTH_SHORT).show()
+            }.onFailure { e ->
+                Toast.makeText(context, "API Stop failed, falling back to Termux: ${e.message}", Toast.LENGTH_LONG).show()
+                TermuxRunner.runCommand(
+                    context,
+                    "pkill -f \"moltbot gateway\"",
+                    "Stop OpenClaw Gateway",
+                    background = true
+                )
+                status = "Stopped"
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
         // Poll status every 10 seconds
         while (true) {
-            // TODO: Implement actual API call to /api/status
+            ApiClient.get("http://127.0.0.1:5039/api/status") { result ->
+                result.onSuccess {
+                    status = if (it.contains("running", ignoreCase = true)) "Running" else "Stopped"
+                }.onFailure {
+                    status = "Error"
+                }
+            }
             delay(10000)
         }
     }
@@ -64,7 +83,15 @@ fun MainScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         // Poll chat logs every 5 seconds
         while (true) {
-            // TODO: Implement actual API call to /api/chat
+            ApiClient.get("http://127.0.0.1:5039/api/chat") { result ->
+                result.onSuccess {
+                    if (it.isNotBlank()) {
+                        chatLogs = it
+                    }
+                }.onFailure {
+                    // Handle error, maybe show a toast or log
+                }
+            }
             delay(5000)
         }
     }
