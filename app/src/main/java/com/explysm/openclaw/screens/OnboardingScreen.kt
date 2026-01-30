@@ -269,9 +269,9 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                         scope.launch {
                             // Save onboarding completed FIRST to prevent race condition
                             settingsRepository.setOnboardingCompleted(true)
-                            // Then navigate
+                            // Then navigate - clear entire back stack since start destination might not exist
                             navController.navigate("main") {
-                                popUpTo("welcome") { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         }
                     }
