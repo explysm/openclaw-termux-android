@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -144,7 +144,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh"""
                                         clipboard.setPrimaryClip(clip)
                                     }
                                 ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy commands")
+                                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copy commands")
                                 }
                             }
                             
@@ -191,7 +191,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                                         clipboard.setPrimaryClip(clip)
                                     }
                                 ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy command")
+                                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copy command")
                                 }
                             }
                             
