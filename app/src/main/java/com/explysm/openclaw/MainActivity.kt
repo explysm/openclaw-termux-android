@@ -58,19 +58,19 @@ fun OpenClawApp(settingsRepository: SettingsRepository) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "welcome") {
         composable("welcome") {
-            WelcomeScreen(navController = navController)
+            WelcomeScreen(navController = navController, settingsRepository = settingsRepository)
         }
         composable("onboarding") {
             OnboardingScreen(navController = navController)
         }
         composable("onboarding_terminal") {
-            OnboardingTerminalScreen(navController = navController)
+            OnboardingTerminalScreen(navController = navController, settingsRepository = settingsRepository)
         }
         composable("main") {
             MainScreen(navController = navController, settingsRepository = settingsRepository)
         }
         composable("settings") {
-            SettingsScreen(navController = navController)
+            SettingsScreen(navController = navController, settingsRepository = settingsRepository)
         }
     }
 }

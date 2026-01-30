@@ -2,7 +2,6 @@ package com.explysm.openclaw.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
@@ -16,53 +15,110 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
+import com.explysm.openclaw.data.SettingsRepository
+import kotlinx.coroutines.launch
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OnboardingTerminalScreen(navController: NavController) {
+fun OnboardingTerminalScreen(navController: NavController, settingsRepository: SettingsRepository) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val webViewRef = remember { mutableListOf<WebView?>(null) }
+    var showLoadingDialog by remember { mutableStateOf(true) }
     
     fun sendKey(key: String, isArrow: Boolean = true) {
-        webViewRef[0]?.evaluateJavascript(
-            """
-            (function() {
-                const event = new KeyboardEvent('keydown', {
-                    key: '$key',
-                    code: '${if (isArrow) "Arrow$key" else key}',
-                    keyCode: ${when(key) {
+        webViewRef[0]?.let { webView ->
+            // Focus the WebView first
+            webView.requestFocus()
+            
+            // Try multiple approaches to send the key
+            webView.evaluateJavascript(
+                """
+                (function() {
+                    // Try to find the terminal input element
+                    const terminal = document.querySelector('textarea') || 
+                                   document.querySelector('input') || 
+                                   document.querySelector('.terminal') ||
+                                   document.querySelector('[contenteditable]') ||
+                                   document.body;
+                    
+                    // Create and dispatch keyboard events
+                    const keyCode = ${when(key) {
                         "Up" -> "38"
                         "Down" -> "40"
                         "Left" -> "37"
                         "Right" -> "39"
                         "Enter" -> "13"
                         else -> "0"
-                    }},
-                    bubbles: true
-                });
-                document.dispatchEvent(event);
-            })();
-            """, null
-        )
+                    }};
+                    const code = '${if (isArrow) "Arrow$key" else key}';
+                    const keyName = '$key';
+                    
+                    // Dispatch keydown
+                    const keydownEvent = new KeyboardEvent('keydown', {
+                        key: keyName,
+                        code: code,
+                        keyCode: keyCode,
+                        which: keyCode,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    terminal.dispatchEvent(keydownEvent);
+                    
+                    // For Enter, also try to submit/input
+                    if (keyName === 'Enter') {
+                        const keyupEvent = new KeyboardEvent('keyup', {
+                            key: keyName,
+                            code: code,
+                            keyCode: keyCode,
+                            which: keyCode,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        terminal.dispatchEvent(keyupEvent);
+                        
+                        // Try to trigger input event as well
+                        const inputEvent = new InputEvent('input', {
+                            inputType: 'insertLineBreak',
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        terminal.dispatchEvent(inputEvent);
+                    }
+                    
+                    return 'Key sent: ' + keyName;
+                })();
+                """, null
+            )
+        }
     }
     
     fun openKeyboard(context: Context) {
@@ -80,8 +136,6 @@ fun OnboardingTerminalScreen(navController: NavController) {
             )
         },
         bottomBar = {
-            val context = LocalContext.current
-            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,8 +186,12 @@ fun OnboardingTerminalScreen(navController: NavController) {
                 // Continue button
                 Button(
                     onClick = {
-                        navController.navigate("main") {
-                            popUpTo("onboarding_terminal") { inclusive = true }
+                        // Mark onboarding as completed
+                        scope.launch {
+                            settingsRepository.setOnboardingCompleted(true)
+                            navController.navigate("main") {
+                                popUpTo("onboarding_terminal") { inclusive = true }
+                            }
                         }
                     },
                     modifier = Modifier.padding(top = 8.dp)
@@ -157,23 +215,46 @@ fun OnboardingTerminalScreen(navController: NavController) {
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                            }
-                        }
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.allowFileAccess = true
+                        settings.setSupportZoom(false)
                         loadUrl("http://127.0.0.1:7681")
                     }
                 },
                 update = {
                     webViewRef[0] = it
-                    // Don't reload URL here - it causes constant reconnections
-                    // The factory already loads the URL initially
                 }
             )
+            
+            // Loading dialog
+            if (showLoadingDialog) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Onboard loading may take a while . . .",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        IconButton(onClick = { showLoadingDialog = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                }
+            }
         }
     }
 }

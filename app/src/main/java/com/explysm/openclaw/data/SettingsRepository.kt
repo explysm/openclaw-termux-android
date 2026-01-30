@@ -21,6 +21,7 @@ class SettingsRepository(private val context: Context) {
         val DARK_THEME = booleanPreferencesKey("dark_theme")
         val AUTO_START = booleanPreferencesKey("auto_start")
         val ENABLE_NOTIFICATIONS = booleanPreferencesKey("enable_notifications")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         
         const val DEFAULT_API_URL = "http://127.0.0.1:5039"
         const val DEFAULT_POLL_INTERVAL = 10
@@ -78,6 +79,17 @@ class SettingsRepository(private val context: Context) {
     suspend fun setEnableNotifications(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ENABLE_NOTIFICATIONS] = enabled
+        }
+    }
+    
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[ONBOARDING_COMPLETED] ?: false
+        }
+    
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ONBOARDING_COMPLETED] = completed
         }
     }
 }
