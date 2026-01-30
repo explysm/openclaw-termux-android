@@ -225,17 +225,36 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                                 "⚠",
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            Column {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Text(
                                     if (isConnected) "Connection unstable" else "API unreachable",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
+                                if (!isConnected) {
+                                    Text(
+                                        "Is 'moltbot --android-app' running on termux?",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                                 lastError?.let {
                                     Text(
                                         it,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
+                                }
+                            }
+                            if (!isConnected) {
+                                Button(
+                                    onClick = { TermuxRunner.openTermuxApp(context) },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
+                                    Text("Open Termux")
                                 }
                             }
                         }
