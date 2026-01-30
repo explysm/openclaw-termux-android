@@ -56,12 +56,22 @@ object TermuxRunner {
             }
         }
         try {
-            context.startService(intent)
+            if (background) {
+                // For background commands, try sending as a broadcast
+                context.sendBroadcast(intent)
+                Toast.makeText(context, "Termux background command sent.", Toast.LENGTH_SHORT).show()
+            } else {
+                // For foreground commands or as a fallback, launch Termux directly
+                context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                Toast.makeText(context, "Termux foreground command launched.", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to run Termux command: ${e.message}", Toast.LENGTH_LONG).show()
-            // Fallback: Launch Termux app if service call fails
+            // Fallback: Launch Termux app if the above fails
             val launchAppIntent = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE_NAME)
-            launchAppIntent?.let { context.startActivity(it) }
+            launchAppIntent?.let {
+                context.startActivity(it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
         }
     }
 }
