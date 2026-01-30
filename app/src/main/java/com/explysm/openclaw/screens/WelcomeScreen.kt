@@ -35,6 +35,10 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
 
     Logger.i("WelcomeScreen", "WelcomeScreen composed. onboardingCompleted=$onboardingCompleted, hasNavigated=$hasNavigated, isNavigating=$isNavigating")
 
+    // Show loading while checking or navigating - render this but DON'T return early
+    // so that LaunchedEffect can still run
+    val showLoading = onboardingCompleted || isNavigating
+    
     // Auto-navigate if onboarding is already completed
     LaunchedEffect(onboardingCompleted, hasNavigated, isNavigating) {
         Logger.d("WelcomeScreen", "LaunchedEffect triggered. onboardingCompleted=$onboardingCompleted, hasNavigated=$hasNavigated, isNavigating=$isNavigating")
@@ -53,8 +57,8 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
         }
     }
 
-    // Show loading while checking or navigating
-    if (onboardingCompleted || isNavigating) {
+    // Show loading UI if needed
+    if (showLoading) {
         Logger.d("WelcomeScreen", "Showing loading state (onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating)")
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -65,8 +69,7 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
             Spacer(modifier = Modifier.height(16.dp))
             Text("Loading...")
         }
-        return
-    }
+    } else {
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -97,5 +100,6 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
         }) {
             Text(text = "Install & Onboard")
         }
+    }
     }
 }
