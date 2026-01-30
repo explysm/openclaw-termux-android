@@ -41,7 +41,14 @@ class MainActivity : ComponentActivity() {
         // Enable edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            val settingsRepository = remember { SettingsRepository(this) }
+            val settingsRepository = remember { 
+                try {
+                    SettingsRepository(this)
+                } catch (e: Exception) {
+                    Logger.e("MainActivity", "Failed to initialize SettingsRepository", e)
+                    throw e
+                }
+            }
             val isDarkTheme by settingsRepository.isDarkTheme.collectAsState(initial = false)
             
             OpenClawAndroidTheme(
