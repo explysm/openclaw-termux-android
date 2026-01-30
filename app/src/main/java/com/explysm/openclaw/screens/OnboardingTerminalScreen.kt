@@ -51,11 +51,11 @@ import kotlinx.coroutines.launch
 fun OnboardingTerminalScreen(navController: NavController, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val webViewRef = remember { mutableListOf<WebView?>(null) }
+    val webViewRef = remember { mutableStateOf<WebView?>(null) }
     var showLoadingDialog by remember { mutableStateOf(true) }
     
     fun sendKey(key: String, isArrow: Boolean = true) {
-        webViewRef[0]?.let { webView ->
+        webViewRef.value?.let { webView ->
             // Focus the WebView first
             webView.requestFocus()
             
@@ -122,7 +122,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
     }
     
     fun openKeyboard(context: Context) {
-        webViewRef[0]?.let { webView ->
+        webViewRef.value?.let { webView ->
             webView.requestFocus()
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             imm.showSoftInput(webView, InputMethodManager.SHOW_IMPLICIT)
@@ -187,12 +187,12 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                 Button(
                     onClick = {
                         scope.launch {
-                            // Navigate FIRST to avoid race condition with WelcomeScreen
+                            // Save onboarding completed FIRST to prevent race condition
+                            settingsRepository.setOnboardingCompleted(true)
+                            // Then navigate
                             navController.navigate("main") {
                                 popUpTo("welcome") { inclusive = true }
                             }
-                            // THEN save onboarding completed
-                            settingsRepository.setOnboardingCompleted(true)
                         }
                     },
                     modifier = Modifier.padding(top = 8.dp)
@@ -211,7 +211,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
             AndroidView(
                 factory = {
                     WebView(it).apply {
-                        webViewRef[0] = this
+                        webViewRef.value = this
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
@@ -224,7 +224,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                     }
                 },
                 update = {
-                    webViewRef[0] = it
+                    webViewRef.value = it
                 }
             )
             

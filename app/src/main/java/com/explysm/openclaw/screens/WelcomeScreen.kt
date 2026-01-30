@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,11 +29,13 @@ import com.explysm.openclaw.utils.TermuxRunner
 fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
     val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = false)
-    var hasNavigated by remember { mutableStateOf(false) }
+    var hasNavigated by rememberSaveable { mutableStateOf(false) }
+    var isNavigating by remember { mutableStateOf(false) }
 
     // Auto-navigate if onboarding is already completed
-    LaunchedEffect(onboardingCompleted) {
-        if (onboardingCompleted && !hasNavigated) {
+    LaunchedEffect(onboardingCompleted, hasNavigated, isNavigating) {
+        if (onboardingCompleted && !hasNavigated && !isNavigating) {
+            isNavigating = true
             hasNavigated = true
             navController.navigate("main") {
                 popUpTo("welcome") { inclusive = true }
@@ -40,8 +43,8 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
         }
     }
 
-    // Show loading while checking
-    if (onboardingCompleted) {
+    // Show loading while checking or navigating
+    if (onboardingCompleted || isNavigating) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,

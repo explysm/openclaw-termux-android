@@ -230,10 +230,15 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
             }
             else -> {
                 // Automatic setup - navigate to terminal screen after brief delay
+                var hasNavigated by remember { mutableStateOf(false) }
+                
                 LaunchedEffect(Unit) {
-                    delay(2000) // Give time for ttyd to start
-                    navController.navigate("onboarding_terminal") {
-                        popUpTo("onboarding") { inclusive = true }
+                    if (!hasNavigated) {
+                        hasNavigated = true
+                        delay(2000) // Give time for ttyd to start
+                        navController.navigate("onboarding_terminal") {
+                            popUpTo("onboarding") { inclusive = true }
+                        }
                     }
                 }
                 

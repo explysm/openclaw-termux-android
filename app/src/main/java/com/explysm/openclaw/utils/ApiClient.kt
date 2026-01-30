@@ -1,5 +1,7 @@
 package com.explysm.openclaw.utils
 
+import android.os.Handler
+import android.os.Looper
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -8,6 +10,7 @@ import java.io.IOException
 object ApiClient {
     private val client = OkHttpClient()
     private val JSON = "application/json; charset=utf-8".toMediaType()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun post(url: String, json: String, callback: (Result<String>) -> Unit) {
         val body = json.toRequestBody(JSON)
@@ -18,13 +21,17 @@ object ApiClient {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback(Result.failure(e))
+                mainHandler.post { callback(Result.failure(e)) }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    if (!response.isSuccessful) callback(Result.failure(IOException("Unexpected code $response")))
-                    callback(Result.success(response.body!!.string()))
+                    val result = if (!response.isSuccessful) {
+                        Result.failure(IOException("HTTP ${response.code}: ${response.message}"))
+                    } else {
+                        Result.success(response.body?.string() ?: "")
+                    }
+                    mainHandler.post { callback(result) }
                 }
             }
         })
@@ -38,13 +45,17 @@ object ApiClient {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback(Result.failure(e))
+                mainHandler.post { callback(Result.failure(e)) }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    if (!response.isSuccessful) callback(Result.failure(IOException("Unexpected code $response")))
-                    callback(Result.success(response.body!!.string()))
+                    val result = if (!response.isSuccessful) {
+                        Result.failure(IOException("HTTP ${response.code}: ${response.message}"))
+                    } else {
+                        Result.success(response.body?.string() ?: "")
+                    }
+                    mainHandler.post { callback(result) }
                 }
             }
         })
