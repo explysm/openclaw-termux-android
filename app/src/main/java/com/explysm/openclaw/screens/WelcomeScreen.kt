@@ -30,29 +30,15 @@ import com.explysm.openclaw.utils.TermuxRunner
 @Composable
 fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepository) {
     val context = LocalContext.current
-    val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = null)
+    val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = false)
     var isNavigating by remember { mutableStateOf(false) }
 
     Logger.i("WelcomeScreen", "Composed. onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating")
 
-    // Auto-navigate if onboarding is already completed
-    LaunchedEffect(onboardingCompleted) {
-        if (onboardingCompleted == true && !isNavigating) {
-            Logger.i("WelcomeScreen", "Onboarding completed, navigating to main")
-            isNavigating = true
-            try {
-                navController.navigate("main") {
-                    popUpTo("welcome") { inclusive = true }
-                }
-            } catch (e: Exception) {
-                Logger.e("WelcomeScreen", "Navigation failed", e)
-                isNavigating = false
-            }
-        }
-    }
+    // Auto-navigation removed to prevent startup crashes/race conditions
 
-    // Show loading while checking or navigating
-    if (onboardingCompleted == null || onboardingCompleted == true || isNavigating) {
+    // Show loading while navigating
+    if (isNavigating) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -119,15 +105,26 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
 
             Button(
                 onClick = {
-                    val isTermuxInstalled = TermuxRunner.isTermuxInstalled(context)
-                    if (isTermuxInstalled) {
-                        navController.navigate("onboarding")
-                    } else {
-                        Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("https://f-droid.org/packages/com.termux/")
+                    if (isNavigating) return@Button
+                    
+                    if (onboardingCompleted) {
+                        Logger.i("WelcomeScreen", "Navigating to main screen")
+                        isNavigating = true
+                        navController.navigate("main") {
+                            popUpTo("welcome") { inclusive = true }
                         }
-                        context.startActivity(intent)
+                    } else {
+                        val isTermuxInstalled = TermuxRunner.isTermuxInstalled(context)
+                        if (isTermuxInstalled) {
+                            Logger.i("WelcomeScreen", "Navigating to onboarding")
+                            navController.navigate("onboarding")
+                        } else {
+                            Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("https://f-droid.org/packages/com.termux/")
+                            }
+                            context.startActivity(intent)
+                        }
                     }
                 },
                 modifier = Modifier
@@ -137,7 +134,7 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
                 Text(
-                    text = "Get Started",
+                    text = if (onboardingCompleted) "Go to Dashboard" else "Get Started",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
