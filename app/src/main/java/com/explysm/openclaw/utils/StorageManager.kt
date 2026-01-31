@@ -64,15 +64,15 @@ object StorageManager {
     }
     
     fun getLogsDir(): File {
-        return logsDir
+        return logsDirectory
     }
-    
+
     fun getDataDir(): File {
-        return dataDir
+        return dataDirectory
     }
-    
+
     fun getBaseDir(): File {
-        return baseDir
+        return baseDirectory
     }
     
     fun isStorageAvailable(): Boolean {
