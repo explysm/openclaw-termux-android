@@ -141,7 +141,7 @@ object StorageManager {
             """
             Storage Manager Info:
             Base Directory: ${baseDirectory.absolutePath}
-            Settings File: ${settingsFile.absolutePath}
+            Settings File: ${settingsFileObj.absolutePath}
             Logs Directory: ${logsDirectory.absolutePath}
             Data Directory: ${dataDirectory.absolutePath}
             External Storage State: ${Environment.getExternalStorageState()}
