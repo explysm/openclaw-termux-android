@@ -12,47 +12,47 @@ object StorageManager {
     private const val LOGS_DIR_NAME = "logs"
     private const val DATA_DIR_NAME = "data"
     
-    private val baseDir: File by lazy {
+    private val baseDirectory: File by lazy {
         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), APP_DIR_NAME)
     }
     
     private val settingsFile: File by lazy {
-        File(baseDir, SETTINGS_FILE_NAME)
+        File(baseDirectory, SETTINGS_FILE_NAME)
     }
     
-    private val logsDir: File by lazy {
-        File(baseDir, LOGS_DIR_NAME)
+    private val logsDirectory: File by lazy {
+        File(baseDirectory, LOGS_DIR_NAME)
     }
     
-    private val dataDir: File by lazy {
-        File(baseDir, DATA_DIR_NAME)
+    private val dataDirectory: File by lazy {
+        File(baseDirectory, DATA_DIR_NAME)
     }
     
     fun initialize(context: Context): Boolean {
         return try {
             // Create main app directory
-            if (!baseDir.exists()) {
-                val created = baseDir.mkdirs()
-                Logger.i("StorageManager", "Created base directory: $baseDir, success: $created")
+            if (!baseDirectory.exists()) {
+                val created = baseDirectory.mkdirs()
+                Logger.i("StorageManager", "Created base directory: $baseDirectory, success: $created")
             }
             
             // Create logs directory
-            if (!logsDir.exists()) {
-                val created = logsDir.mkdirs()
-                Logger.i("StorageManager", "Created logs directory: $logsDir, success: $created")
+            if (!logsDirectory.exists()) {
+                val created = logsDirectory.mkdirs()
+                Logger.i("StorageManager", "Created logs directory: $logsDirectory, success: $created")
             }
             
             // Create data directory
-            if (!dataDir.exists()) {
-                val created = dataDir.mkdirs()
-                Logger.i("StorageManager", "Created data directory: $dataDir, success: $created")
+            if (!dataDirectory.exists()) {
+                val created = dataDirectory.mkdirs()
+                Logger.i("StorageManager", "Created data directory: $dataDirectory, success: $created")
             }
             
             // Verify external storage is writable
             val writable = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
             Logger.i("StorageManager", "External storage writable: $writable")
             
-            writable && baseDir.exists() && logsDir.exists() && dataDir.exists()
+            writable && baseDirectory.exists() && logsDirectory.exists() && dataDirectory.exists()
         } catch (e: Exception) {
             Logger.e("StorageManager", "Failed to initialize storage directories", e)
             false
@@ -77,7 +77,7 @@ object StorageManager {
     
     fun isStorageAvailable(): Boolean {
         return try {
-            Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED && baseDir.exists()
+            Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED && baseDirectory.exists()
         } catch (e: Exception) {
             Logger.e("StorageManager", "Error checking storage availability", e)
             false
@@ -140,13 +140,13 @@ object StorageManager {
         return try {
             """
             Storage Manager Info:
-            Base Directory: ${baseDir.absolutePath}
+            Base Directory: ${baseDirectory.absolutePath}
             Settings File: ${settingsFile.absolutePath}
-            Logs Directory: ${logsDir.absolutePath}
-            Data Directory: ${dataDir.absolutePath}
+            Logs Directory: ${logsDirectory.absolutePath}
+            Data Directory: ${dataDirectory.absolutePath}
             External Storage State: ${Environment.getExternalStorageState()}
             Storage Available: ${isStorageAvailable()}
-            Base Dir Exists: ${baseDir.exists()}
+            Base Dir Exists: ${baseDirectory.exists()}
             Settings File Exists: ${settingsFile.exists()}
             """.trimIndent()
         } catch (e: Exception) {
