@@ -159,6 +159,17 @@ class SettingsRepository(private val context: Context) {
         }
     }
     
+    suspend fun setPostOnboardingHelpShown(shown: Boolean) {
+        try {
+            val newSettings = _settings.value.copy(postOnboardingHelpShown = shown)
+            _settings.value = newSettings
+            saveSettingsToFile(newSettings)
+            Logger.d("SettingsRepository", "Post onboarding help shown updated: $shown")
+        } catch (e: Exception) {
+            Logger.e("SettingsRepository", "Error setting post onboarding help shown", e)
+        }
+    }
+    
     // Additional utility functions
     suspend fun resetToDefaults() {
         try {

@@ -9,5 +9,6 @@ data class SettingsData(
     val darkTheme: Boolean = false,
     val autoStart: Boolean = false,
     val enableNotifications: Boolean = true,
-    val onboardingCompleted: Boolean = false
+    val onboardingCompleted: Boolean = false,
+    val postOnboardingHelpShown: Boolean = false
 )
