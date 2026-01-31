@@ -7,81 +7,66 @@ import java.io.File
 
 object StorageManager {
     
-    private const val APP_DIR_NAME = "OpenClaw-Termux"
+    private const val APP_DIR_NAME = "OpenClaw"
     private const val SETTINGS_FILE_NAME = "settings.json"
     private const val LOGS_DIR_NAME = "logs"
     private const val DATA_DIR_NAME = "data"
     
-    private val baseDirectory: File by lazy {
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), APP_DIR_NAME)
-    }
-    
-    private val settingsFileObj: File by lazy {
-        File(baseDirectory, SETTINGS_FILE_NAME)
-    }
-    
-    private val logsDirectory: File by lazy {
-        File(baseDirectory, LOGS_DIR_NAME)
-    }
-    
-    private val dataDirectory: File by lazy {
-        File(baseDirectory, DATA_DIR_NAME)
-    }
+    private var baseDirectory: File? = null
+    private var internalDirectory: File? = null
+    private var settingsFileObj: File? = null
+    private var logsDirectory: File? = null
+    private var dataDirectory: File? = null
     
     fun initialize(context: Context): Boolean {
         return try {
-            // Create main app directory
-            if (!baseDirectory.exists()) {
-                val created = baseDirectory.mkdirs()
-                Logger.i("StorageManager", "Created base directory: $baseDirectory, success: $created")
-            }
+            // Internal storage is the most reliable for settings
+            internalDirectory = context.filesDir
             
-            // Create logs directory
-            if (!logsDirectory.exists()) {
-                val created = logsDirectory.mkdirs()
-                Logger.i("StorageManager", "Created logs directory: $logsDirectory, success: $created")
-            }
+            // External app-specific storage is good for logs and larger data
+            // It's accessible via USB at Android/data/com.explysm.openclaw/files
+            // and requires NO permissions.
+            baseDirectory = context.getExternalFilesDir(null) ?: context.filesDir
             
-            // Create data directory
-            if (!dataDirectory.exists()) {
-                val created = dataDirectory.mkdirs()
-                Logger.i("StorageManager", "Created data directory: $dataDirectory, success: $created")
-            }
+            val baseDir = baseDirectory!!
             
-            // Verify external storage is writable
-            val writable = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
-            Logger.i("StorageManager", "External storage writable: $writable")
+            // Settings should be internal for maximum reliability
+            settingsFileObj = File(context.filesDir, SETTINGS_FILE_NAME)
             
-            writable && baseDirectory.exists() && logsDirectory.exists() && dataDirectory.exists()
+            // Logs and data can be in the external app-specific dir
+            logsDirectory = File(baseDir, LOGS_DIR_NAME)
+            dataDirectory = File(baseDir, DATA_DIR_NAME)
+            
+            // Create directories
+            if (!logsDirectory!!.exists()) logsDirectory!!.mkdirs()
+            if (!dataDirectory!!.exists()) dataDirectory!!.mkdirs()
+            
+            Logger.i("StorageManager", "Storage initialized. Internal: ${context.filesDir}, External: $baseDir")
+            true
         } catch (e: Exception) {
-            Logger.e("StorageManager", "Failed to initialize storage directories", e)
+            android.util.Log.e("StorageManager", "Failed to initialize storage", e)
             false
         }
     }
     
     fun getSettingsFile(): File {
-        return settingsFileObj
+        return settingsFileObj ?: File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), SETTINGS_FILE_NAME)
     }
     
     fun getLogsDir(): File {
-        return logsDirectory
+        return logsDirectory ?: File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), LOGS_DIR_NAME)
     }
 
     fun getDataDir(): File {
-        return dataDirectory
+        return dataDirectory ?: File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DATA_DIR_NAME)
     }
 
     fun getBaseDir(): File {
-        return baseDirectory
+        return baseDirectory ?: File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), APP_DIR_NAME)
     }
     
     fun isStorageAvailable(): Boolean {
-        return try {
-            Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED && baseDirectory.exists()
-        } catch (e: Exception) {
-            Logger.e("StorageManager", "Error checking storage availability", e)
-            false
-        }
+        return settingsFileObj != null
     }
     
     fun getFileContent(file: File): String? {
@@ -89,7 +74,6 @@ object StorageManager {
             if (file.exists() && file.canRead()) {
                 file.readText()
             } else {
-                Logger.w("StorageManager", "File not readable: ${file.absolutePath}")
                 null
             }
         } catch (e: Exception) {
@@ -100,11 +84,8 @@ object StorageManager {
     
     fun setFileContent(file: File, content: String): Boolean {
         return try {
-            // Ensure parent directory exists
             file.parentFile?.mkdirs()
-            
             file.writeText(content)
-            Logger.d("StorageManager", "Successfully wrote file: ${file.absolutePath}")
             true
         } catch (e: Exception) {
             Logger.e("StorageManager", "Error writing file: ${file.absolutePath}", e)
@@ -140,14 +121,14 @@ object StorageManager {
         return try {
             """
             Storage Manager Info:
-            Base Directory: ${baseDirectory.absolutePath}
-            Settings File: ${settingsFileObj.absolutePath}
-            Logs Directory: ${logsDirectory.absolutePath}
-            Data Directory: ${dataDirectory.absolutePath}
+            Base Directory: ${baseDirectory?.absolutePath ?: "Not Initialized"}
+            Settings File: ${settingsFileObj?.absolutePath ?: "Not Initialized"}
+            Logs Directory: ${logsDirectory?.absolutePath ?: "Not Initialized"}
+            Data Directory: ${dataDirectory?.absolutePath ?: "Not Initialized"}
             External Storage State: ${Environment.getExternalStorageState()}
             Storage Available: ${isStorageAvailable()}
-            Base Dir Exists: ${baseDirectory.exists()}
-            Settings File Exists: ${settingsFileObj.exists()}
+            Base Dir Exists: ${baseDirectory?.exists() ?: false}
+            Settings File Exists: ${settingsFileObj?.exists() ?: false}
             """.trimIndent()
         } catch (e: Exception) {
             "Error getting storage info: ${e.message}"
