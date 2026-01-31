@@ -112,13 +112,9 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
-    Logger.i("MainScreen", "MainScreen composing...")
-    
     // Collect settings
     val apiUrl by settingsRepository.apiUrl.collectAsState(initial = SettingsRepository.DEFAULT_API_URL)
     val pollInterval by settingsRepository.pollInterval.collectAsState(initial = SettingsRepository.DEFAULT_POLL_INTERVAL)
-    
-    Logger.d("MainScreen", "Settings collected: apiUrl=$apiUrl, pollInterval=$pollInterval")
     
     var status by remember { mutableStateOf("Unknown") }
     var isConnected by remember { mutableStateOf(false) }
@@ -127,7 +123,7 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     
     // Smart retry logic with exponential backoff
     var consecutiveFailures by remember { mutableStateOf(0) }
-    val maxRetryDelay = 60_000L // Max 60 seconds
+    val maxRetryDelay = 60_000L 
     val baseDelay = pollInterval * 1000L
     
     fun calculateRetryDelay(): Long {
@@ -139,20 +135,16 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     }
     
     fun refreshStatus(onComplete: (() -> Unit)? = null) {
-        Logger.d("MainScreen", "refreshStatus() called")
         scope.launch {
             isRefreshing = true
             val url = "$apiUrl/api/status"
-            Logger.d("MainScreen", "Making API call to: $url")
             ApiClient.get(url) { result ->
                 result.onSuccess { response ->
-                    Logger.d("MainScreen", "API success: $response")
                     status = if (response.contains("running", ignoreCase = true)) "Running" else "Stopped"
                     isConnected = true
                     consecutiveFailures = 0
                     lastError = null
                 }.onFailure { e ->
-                    Logger.w("MainScreen", "API failed: ${e.message}", e)
                     isConnected = false
                     consecutiveFailures++
                     lastError = e.message
@@ -162,27 +154,17 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                 }
                 isRefreshing = false
                 onComplete?.invoke()
-                Logger.d("MainScreen", "refreshStatus() completed")
             }
         }
     }
     
     // Initial load and polling
     LaunchedEffect(apiUrl, pollInterval) {
-        Logger.i("MainScreen", "LaunchedEffect triggered. Starting polling...")
-        try {
-            // Initial check
+        refreshStatus()
+        while (true) {
+            val delayMs = calculateRetryDelay()
+            delay(delayMs)
             refreshStatus()
-            
-            // Status polling loop with smart retry
-            while (true) {
-                val delayMs = calculateRetryDelay()
-                Logger.d("MainScreen", "Waiting ${delayMs}ms before next poll")
-                delay(delayMs)
-                refreshStatus()
-            }
-        } catch (e: Exception) {
-            Logger.e("MainScreen", "Exception in polling loop", e)
         }
     }
     
@@ -193,33 +175,36 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("OpenClaw: $status")
-                        // Connection status indicator
                         Surface(
-                            shape = MaterialTheme.shapes.small,
+                            shape = CircleShape,
                             color = when {
-                                isConnected && status == "Running" -> MaterialTheme.colorScheme.tertiary
-                                isConnected -> MaterialTheme.colorScheme.primary
+                                isConnected && status == "Running" -> Color(0xFF4CAF50)
+                                isConnected -> MaterialTheme.colorScheme.secondary
                                 else -> MaterialTheme.colorScheme.error
                             },
-                            modifier = Modifier.size(8.dp)
+                            modifier = Modifier.size(12.dp)
                         ) {}
+                        Text(
+                            "OpenClaw: $status",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { refreshStatus() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                )
             )
         }
     ) { paddingValues ->
@@ -232,222 +217,168 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Connection status chip
                 if (!isConnected || lastError != null) {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                "⚠",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
+                            Text("⚠", fontSize = 24.sp)
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     if (isConnected) "Connection unstable" else "API unreachable",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 if (!isConnected) {
                                     Text(
-                                        "Is 'moltbot --android-app' running on termux?",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                                lastError?.let {
-                                    Text(
-                                        it,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                        "Is 'moltbot --android-app' running in Termux?",
+                                        style = MaterialTheme.typography.bodySmall
                                     )
                                 }
                             }
                             if (!isConnected) {
-                                Button(
+                                TextButton(
                                     onClick = { TermuxRunner.openTermuxApp(context) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                    )
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                                 ) {
                                     Text("Open Termux")
                                 }
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
                 
-                // Retry delay indicator
-                if (consecutiveFailures > 0) {
-                    Text(
-                        "Retrying in ${calculateRetryDelay() / 1000}s (attempt ${consecutiveFailures})",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Button(
-                    onClick = {
-                        try {
-                            ApiClient.post("$apiUrl/api/start", "") { result ->
-                                result.onSuccess {
-                                    status = "Running"
-                                    Toast.makeText(context, "OpenClaw started.", Toast.LENGTH_SHORT).show()
-                                }.onFailure { e ->
-                                    Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
-                                    try {
-                                        val success = TermuxRunner.runCommand(
-                                            context,
-                                            "moltbot --android-app &",
-                                            "OpenClaw Gateway",
-                                            background = true
-                                        )
-                                        if (success) {
-                                            Toast.makeText(context, "Command sent to Termux. Checking status...", Toast.LENGTH_SHORT).show()
-                                            // Wait a moment then check if it actually started
-                                            scope.launch {
-                                                delay(3000)
-                                                refreshStatus()
-                                            }
-                                        } else {
-                                            Toast.makeText(context, "Failed to send command to Termux", Toast.LENGTH_LONG).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error starting bot: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Start OpenClaw", fontSize = 20.sp)
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Button(
-                    onClick = {
-                        try {
-                            ApiClient.post("$apiUrl/api/stop", "") { result ->
-                                result.onSuccess {
-                                    status = "Stopped"
-                                    Toast.makeText(context, "OpenClaw stopped.", Toast.LENGTH_SHORT).show()
-                                }.onFailure { e ->
-                                    Toast.makeText(context, "API failed, trying Termux...", Toast.LENGTH_SHORT).show()
-                                    try {
-                                        val success = TermuxRunner.runCommand(
-                                            context,
-                                            "pkill -f \"moltbot gateway\"",
-                                            "Stop OpenClaw Gateway",
-                                            background = true
-                                        )
-                                        if (success) {
-                                            Toast.makeText(context, "Stop command sent to Termux", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Failed to send stop command", Toast.LENGTH_LONG).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error stopping bot: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    },
+                // Primary Control Card
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Text(text = "Stop OpenClaw", fontSize = 20.sp)
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Core Controls",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    ApiClient.post("$apiUrl/api/start", "") { result ->
+                                        result.onSuccess { status = "Running" }
+                                              .onFailure { /* Fallback handled */ }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Text("Start", fontWeight = FontWeight.Bold)
+                            }
+                            
+                            FilledTonalButton(
+                                onClick = {
+                                    ApiClient.post("$apiUrl/api/stop", "") { result ->
+                                        result.onSuccess { status = "Stopped" }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = MaterialTheme.shapes.large,
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text("Stop", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 
-                Text(text = "Terminal/Logs:", fontSize = 18.sp)
+                // Terminal Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Terminal View",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = { refreshStatus() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Terminal", size(20.dp))
+                    }
+                }
                 
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Terminal Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                        .height(350.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Black),
+                    shape = MaterialTheme.shapes.medium,
+                    border = CardDefaults.outlinedCardBorder()
                 ) {
-                      AndroidView(
-                          factory = { ctx ->
-                              Logger.i("MainScreen", "Creating WebView with file access")
-                              WebView(ctx).apply {
-                                  layoutParams = ViewGroup.LayoutParams(
-                                      ViewGroup.LayoutParams.MATCH_PARENT,
-                                      ViewGroup.LayoutParams.MATCH_PARENT
-                                  )
-                                  webViewClient = object : WebViewClient() {
-                                      override fun onReceivedError(
-                                          view: WebView?,
-                                          errorCode: Int,
-                                          description: String?,
-                                          failingUrl: String?
-                                      ) {
-                                          Logger.w("MainScreen", "WebView error: $errorCode - $description for $failingUrl")
-                                          // Suppress WebView errors - ttyd may not be running yet
-                                          // This prevents crashes when local server is unavailable
-                                      }
-                                  }
-                                  
-                                  // Enable file access for external storage
-                                  settings.javaScriptEnabled = true
-                                  settings.domStorageEnabled = true
-                                  settings.allowFileAccess = true
-                                  settings.allowContentAccess = true
-                                  settings.allowFileAccessFromFileURLs = true
-                                  settings.allowUniversalAccessFromFileURLs = true
-                                  
-                                  // Add JavaScript interface for file operations
-                                  addJavascriptInterface(FileInterface(context), "AndroidFileInterface")
-                                  
-                                  // Enable debug for development
-                                  WebView.setWebContentsDebuggingEnabled(true)
-                                  
-                                  val url = "http://127.0.0.1:7681"
-                                  Logger.i("MainScreen", "Loading WebView URL: $url with file access enabled")
-                                  loadUrl(url)
-                              }
-                          },
-                        update = {
-                            // Don't reload URL here - it causes constant reconnections
-                            // The factory already loads the URL initially
-                        }
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                webViewClient = object : WebViewClient() {
+                                    override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {}
+                                }
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.allowFileAccess = true
+                                addJavascriptInterface(FileInterface(context), "AndroidFileInterface")
+                                loadUrl("http://127.0.0.1:7681")
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(32.dp))
             }
             
             PullRefreshIndicator(
                 refreshing = isRefreshing,
                 state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
+                modifier = Modifier.align(Alignment.TopCenter),
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
             )
         }
     }
