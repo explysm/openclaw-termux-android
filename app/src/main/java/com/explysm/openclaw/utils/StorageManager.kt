@@ -16,7 +16,7 @@ object StorageManager {
         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), APP_DIR_NAME)
     }
     
-    private val settingsFile: File by lazy {
+    private val settingsFileObj: File by lazy {
         File(baseDirectory, SETTINGS_FILE_NAME)
     }
     
@@ -60,7 +60,7 @@ object StorageManager {
     }
     
     fun getSettingsFile(): File {
-        return settingsFile
+        return settingsFileObj
     }
     
     fun getLogsDir(): File {
@@ -147,7 +147,7 @@ object StorageManager {
             External Storage State: ${Environment.getExternalStorageState()}
             Storage Available: ${isStorageAvailable()}
             Base Dir Exists: ${baseDirectory.exists()}
-            Settings File Exists: ${settingsFile.exists()}
+            Settings File Exists: ${settingsFileObj.exists()}
             """.trimIndent()
         } catch (e: Exception) {
             "Error getting storage info: ${e.message}"
