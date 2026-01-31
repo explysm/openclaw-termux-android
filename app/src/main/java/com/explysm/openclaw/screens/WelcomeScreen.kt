@@ -4,25 +4,17 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.explysm.openclaw.R
 import com.explysm.openclaw.data.SettingsRepository
 import com.explysm.openclaw.utils.Logger
 import com.explysm.openclaw.utils.TermuxRunner
@@ -33,126 +25,66 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
     val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = false)
     var isNavigating by remember { mutableStateOf(false) }
 
-    Logger.i("WelcomeScreen", "Composed. onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating")
+    Logger.i("WelcomeScreen", "Composed. onboardingCompleted=$onboardingCompleted")
 
-    // Auto-navigation removed to prevent startup crashes/race conditions
-
-    // Show loading while navigating
-    if (isNavigating) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-        }
-        return
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .systemBarsPadding(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Logo / Icon
-            Box(
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (isNavigating) {
+            CircularProgressIndicator()
+        } else {
+            Column(
                 modifier = Modifier
-                    .size(160.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_lobster),
-                    contentDescription = "OpenClaw Logo",
-                    modifier = Modifier.size(100.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Text(
-                text = "OpenClaw",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.ExtraBold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Your personal AI companion, powered by Termux.",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(64.dp))
-
-            Button(
-                onClick = {
-                    if (isNavigating) return@Button
-                    
-                    if (onboardingCompleted) {
-                        Logger.i("WelcomeScreen", "User clicked Go to Dashboard. Navigating to 'main'...")
-                        isNavigating = true
-                        try {
-                            navController.navigate("main")
-                        } catch (e: Exception) {
-                            Logger.e("WelcomeScreen", "Navigation to 'main' failed", e)
-                            isNavigating = false
-                            Toast.makeText(context, "Navigation error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        val isTermuxInstalled = TermuxRunner.isTermuxInstalled(context)
-                        if (isTermuxInstalled) {
-                            Logger.i("WelcomeScreen", "Navigating to onboarding")
-                            navController.navigate("onboarding")
-                        } else {
-                            Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse("https://f-droid.org/packages/com.termux/")
-                            }
-                            context.startActivity(intent)
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (onboardingCompleted) "Go to Dashboard" else "Get Started",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "OpenClaw",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            TextButton(onClick = {
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://github.com/explysm/openclaw")
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Your personal AI companion",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                Button(
+                    onClick = {
+                        if (isNavigating) return@Button
+                        isNavigating = true
+                        
+                        try {
+                            if (onboardingCompleted) {
+                                Logger.i("WelcomeScreen", "Navigating to main")
+                                navController.navigate("main")
+                            } else {
+                                if (TermuxRunner.isTermuxInstalled(context)) {
+                                    Logger.i("WelcomeScreen", "Navigating to onboarding")
+                                    navController.navigate("onboarding")
+                                } else {
+                                    isNavigating = false
+                                    Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux/"))
+                                    context.startActivity(intent)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Logger.e("WelcomeScreen", "Navigation failed", e)
+                            isNavigating = false
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text(if (onboardingCompleted) "Go to Dashboard" else "Get Started")
                 }
-                context.startActivity(intent)
-            }) {
-                Text("Learn more on GitHub")
             }
         }
     }

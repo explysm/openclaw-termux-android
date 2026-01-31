@@ -1,8 +1,6 @@
 package com.explysm.openclaw.ui.theme
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -17,40 +15,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private fun Context.findActivity(): Activity? {
-    var context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
-}
-
 private val DarkColorScheme = darkColorScheme(
-    primary = LobsterRedTertiary,
+    primary = LobsterRedPrimary,
     secondary = OceanTeal,
-    tertiary = LobsterRedPrimary,
-    background = DarkBackground,
-    surface = DarkSurface,
-    onBackground = DarkOnSurface,
-    onSurface = DarkOnSurface
+    tertiary = LobsterRedTertiary
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = LobsterRedPrimary,
     secondary = OceanTeal,
-    tertiary = LobsterRedSecondary,
-    background = LightBackground,
-    surface = LightSurface,
-    onBackground = LightOnSurface,
-    onSurface = LightOnSurface
+    tertiary = LobsterRedSecondary
 )
 
 @Composable
 fun OpenClawAndroidTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Disable by default for more consistent branding
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -58,23 +38,17 @@ fun OpenClawAndroidTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val activity = view.context.findActivity()
-            if (activity != null) {
-                val window = activity.window
-                // Use transparent status/nav bars with edge-to-edge
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                
-                val insetsController = WindowCompat.getInsetsController(window, view)
-                insetsController.isAppearanceLightStatusBars = !darkTheme
-                insetsController.isAppearanceLightNavigationBars = !darkTheme
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                window.statusBarColor = colorScheme.primary.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             }
         }
     }
