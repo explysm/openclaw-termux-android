@@ -57,9 +57,6 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
 
                 Button(
                     onClick = {
-                        if (isNavigating) return@Button
-                        isNavigating = true
-                        
                         try {
                             if (onboardingCompleted) {
                                 Logger.i("WelcomeScreen", "Navigating to main")
@@ -69,7 +66,6 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
                                     Logger.i("WelcomeScreen", "Navigating to onboarding")
                                     navController.navigate("onboarding")
                                 } else {
-                                    isNavigating = false
                                     Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux/"))
                                     context.startActivity(intent)
@@ -77,7 +73,6 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
                             }
                         } catch (e: Exception) {
                             Logger.e("WelcomeScreen", "Navigation failed", e)
-                            isNavigating = false
                             Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     },

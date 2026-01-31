@@ -2,36 +2,25 @@ package com.explysm.openclaw.screens
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.explysm.openclaw.data.SettingsRepository
 import com.explysm.openclaw.utils.ApiClient
 import com.explysm.openclaw.utils.Logger
-import com.explysm.openclaw.utils.StorageManager
 import com.explysm.openclaw.utils.TermuxRunner
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.min
-import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +32,7 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     var status by remember { mutableStateOf("Unknown") }
     
     LaunchedEffect(apiUrl) {
-        // Simple status check
+        // Simple status check on entry
         ApiClient.get("$apiUrl/api/status") { result ->
             result.onSuccess { response ->
                 status = if (response.contains("running", ignoreCase = true)) "Running" else "Stopped"
@@ -107,6 +96,8 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                     factory = { ctx ->
                         WebView(ctx).apply {
                             settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            webViewClient = WebViewClient()
                             loadUrl("http://127.0.0.1:7681")
                         }
                     },
