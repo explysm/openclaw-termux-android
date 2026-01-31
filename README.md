@@ -4,7 +4,7 @@ Ui Wrapper For [OpenClaw Termux](https://github.com/explysm/openclaw-termux) Mad
 > [!IMPORTANT]  
 > OpenClaw Android is no where near ready to use daily; It is mostly a **proof of concept** of an idea i had this morning.
 
-### Getting Started (Just here so i dont have to worry about it later)
+### Getting Started
 
 - Download the latest apk from [releases](https://github.com/explysm/openclaw-termux-android/releases)
 
