@@ -54,8 +54,10 @@ class SettingsRepository(private val context: Context) {
             } else {
                 Logger.i("SettingsRepository", "No JSON settings found, using defaults")
                 _settings.value = SettingsData()
-                // Save default settings to file
-                saveSettingsToFile(SettingsData())
+                // Save default settings to file asynchronously
+                kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                    saveSettingsToFile(SettingsData())
+                }
             }
             
             Logger.i("SettingsRepository", "Final settings loaded: ${_settings.value}")
