@@ -33,12 +33,20 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
     val onboardingCompleted by settingsRepository.onboardingCompleted.collectAsState(initial = null)
     var isNavigating by remember { mutableStateOf(false) }
 
+    Logger.i("WelcomeScreen", "Composed. onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating")
+
     // Auto-navigate if onboarding is already completed
     LaunchedEffect(onboardingCompleted) {
         if (onboardingCompleted == true && !isNavigating) {
+            Logger.i("WelcomeScreen", "Onboarding completed, navigating to main")
             isNavigating = true
-            navController.navigate("main") {
-                popUpTo("welcome") { inclusive = true }
+            try {
+                navController.navigate("main") {
+                    popUpTo("welcome") { inclusive = true }
+                }
+            } catch (e: Exception) {
+                Logger.e("WelcomeScreen", "Navigation failed", e)
+                isNavigating = false
             }
         }
     }

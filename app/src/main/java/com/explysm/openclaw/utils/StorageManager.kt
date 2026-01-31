@@ -38,10 +38,16 @@ object StorageManager {
             dataDirectory = File(baseDir, DATA_DIR_NAME)
             
             // Create directories
-            if (!logsDirectory!!.exists()) logsDirectory!!.mkdirs()
-            if (!dataDirectory!!.exists()) dataDirectory!!.mkdirs()
+            if (!logsDirectory!!.exists()) {
+                val created = logsDirectory!!.mkdirs()
+                android.util.Log.i("StorageManager", "Created logs directory: $logsDirectory, success: $created")
+            }
+            if (!dataDirectory!!.exists()) {
+                val created = dataDirectory!!.mkdirs()
+                android.util.Log.i("StorageManager", "Created data directory: $dataDirectory, success: $created")
+            }
             
-            Logger.i("StorageManager", "Storage initialized. Internal: ${context.filesDir}, External: $baseDir")
+            android.util.Log.i("StorageManager", "Storage initialized. Internal: ${context.filesDir}, External: $baseDir")
             true
         } catch (e: Exception) {
             android.util.Log.e("StorageManager", "Failed to initialize storage", e)
