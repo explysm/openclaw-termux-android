@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="i.png" width="200" alt="OpenClaw Logo">
+</p>
+
 # OpenClaw Android
 Ui Wrapper For [OpenClaw Termux](https://github.com/explysm/openclaw-termux) Made In Kotlin For Modern Simplicity.
 
