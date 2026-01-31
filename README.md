@@ -1,10 +1,15 @@
-# might archive it
+<p align="center">
+  <img src="i.png" width="200" alt="OpenClaw Logo">
+</p>
 
 # OpenClaw Android
 Ui Wrapper For [OpenClaw Termux](https://github.com/explysm/openclaw-termux) Made In Kotlin For Modern Simplicity.
 
-### Getting Started (Just here so i dont have to worry about it later)
+> [!IMPORTANT]  
+> OpenClaw Android is no where near ready to use daily; It is mostly a **proof of concept** of an idea i had this morning.
 
-- Download the latest apk from [releases](https://github.com/explysm/openclaw-termux-android)
+### Getting Started
+
+- Download the latest apk from [releases](https://github.com/explysm/openclaw-termux-android/releases)
 
 & Enjoy!

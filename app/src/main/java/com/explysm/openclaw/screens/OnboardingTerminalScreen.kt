@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.explysm.openclaw.data.SettingsRepository
+import com.explysm.openclaw.utils.Logger
 import kotlinx.coroutines.launch
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -54,7 +55,10 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
     var showLoadingDialog by remember { mutableStateOf(true) }
     
+    Logger.i("OnboardingTerminalScreen", "OnboardingTerminalScreen composed")
+    
     fun sendKey(key: String, isArrow: Boolean = true) {
+        Logger.d("OnboardingTerminalScreen", "Sending key: $key (isArrow=$isArrow)")
         webViewRef.value?.let { webView ->
             // Focus the WebView first
             webView.requestFocus()
@@ -122,6 +126,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
     }
     
     fun openKeyboard(context: Context) {
+        Logger.d("OnboardingTerminalScreen", "Opening keyboard")
         webViewRef.value?.let { webView ->
             webView.requestFocus()
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -186,12 +191,19 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                 // Continue button
                 Button(
                     onClick = {
+                        Logger.i("OnboardingTerminalScreen", "Continue button clicked, completing onboarding")
                         scope.launch {
-                            // Save onboarding completed FIRST to prevent race condition
-                            settingsRepository.setOnboardingCompleted(true)
-                            // Then navigate - clear entire back stack since start destination might not exist
-                            navController.navigate("main") {
-                                popUpTo(0) { inclusive = true }
+                            try {
+                                // Save onboarding completed FIRST to prevent race condition
+                                settingsRepository.setOnboardingCompleted(true)
+                                Logger.i("OnboardingTerminalScreen", "Onboarding marked as completed in DataStore")
+                                // Then navigate - clear entire back stack since start destination might not exist
+                                navController.navigate("main") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                                Logger.i("OnboardingTerminalScreen", "Navigation to main succeeded")
+                            } catch (e: Exception) {
+                                Logger.e("OnboardingTerminalScreen", "Error completing onboarding", e)
                             }
                         }
                     },
@@ -210,6 +222,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
         ) {
             AndroidView(
                 factory = {
+                    Logger.i("OnboardingTerminalScreen", "Creating WebView for terminal")
                     WebView(it).apply {
                         webViewRef.value = this
                         layoutParams = ViewGroup.LayoutParams(
@@ -220,6 +233,7 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                         settings.domStorageEnabled = true
                         settings.allowFileAccess = true
                         settings.setSupportZoom(false)
+                        Logger.i("OnboardingTerminalScreen", "Loading terminal URL: http://127.0.0.1:7681")
                         loadUrl("http://127.0.0.1:7681")
                     }
                 },

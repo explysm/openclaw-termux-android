@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -67,8 +68,8 @@ dependencies {
     // OkHttp for API calls
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
-    // DataStore for preferences
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    // Serialization for JSON settings
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
     
     // Splash Screen API
     implementation("androidx.core:core-splashscreen:1.0.1")

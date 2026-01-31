@@ -14,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.explysm.openclaw.data.SettingsRepository
+import com.explysm.openclaw.utils.Logger
 import com.explysm.openclaw.utils.TermuxRunner
 
 @Composable
@@ -32,19 +32,29 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
     var hasNavigated by remember { mutableStateOf(false) }
     var isNavigating by remember { mutableStateOf(false) }
 
+    Logger.i("WelcomeScreen", "WelcomeScreen composed. onboardingCompleted=$onboardingCompleted, hasNavigated=$hasNavigated, isNavigating=$isNavigating")
+
     // Auto-navigate if onboarding is already completed
-    LaunchedEffect(onboardingCompleted, hasNavigated, isNavigating) {
+    LaunchedEffect(onboardingCompleted) {
+        Logger.d("WelcomeScreen", "LaunchedEffect triggered for onboardingCompleted=$onboardingCompleted")
         if (onboardingCompleted && !hasNavigated && !isNavigating) {
+            Logger.i("WelcomeScreen", "Auto-navigating to main screen (onboarding already completed)")
             isNavigating = true
             hasNavigated = true
-            navController.navigate("main") {
-                popUpTo("welcome") { inclusive = true }
+            try {
+                navController.navigate("main") {
+                    popUpTo("welcome") { inclusive = true }
+                }
+                Logger.i("WelcomeScreen", "Navigation to main initiated successfully")
+            } catch (e: Exception) {
+                Logger.e("WelcomeScreen", "Navigation to main failed", e)
             }
         }
     }
 
     // Show loading while checking or navigating
     if (onboardingCompleted || isNavigating) {
+        Logger.d("WelcomeScreen", "Showing loading state (onboardingCompleted=$onboardingCompleted, isNavigating=$isNavigating)")
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
@@ -69,9 +79,14 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = {
-            if (TermuxRunner.isTermuxInstalled(context)) {
+            Logger.i("WelcomeScreen", "Install & Onboard button clicked")
+            val isTermuxInstalled = TermuxRunner.isTermuxInstalled(context)
+            Logger.d("WelcomeScreen", "Termux installed: $isTermuxInstalled")
+            if (isTermuxInstalled) {
+                Logger.i("WelcomeScreen", "Navigating to onboarding")
                 navController.navigate("onboarding")
             } else {
+                Logger.w("WelcomeScreen", "Termux not installed, showing install prompt")
                 Toast.makeText(context, "Install Termux first", Toast.LENGTH_LONG).show()
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     data = Uri.parse("https://f-droid.org/packages/com.termux/")

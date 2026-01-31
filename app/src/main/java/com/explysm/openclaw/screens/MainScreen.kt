@@ -2,6 +2,7 @@ package com.explysm.openclaw.screens
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -26,11 +27,83 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.explysm.openclaw.data.SettingsRepository
 import com.explysm.openclaw.utils.ApiClient
+import com.explysm.openclaw.utils.Logger
+import com.explysm.openclaw.utils.StorageManager
 import com.explysm.openclaw.utils.TermuxRunner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.min
 import kotlin.math.pow
+
+// JavaScript interface for file operations
+class FileInterface(private val context: android.content.Context) {
+    @JavascriptInterface
+    fun getStorageInfo(): String {
+        return try {
+            StorageManager.getStorageInfo()
+        } catch (e: Exception) {
+            "Error getting storage info: ${e.message}"
+        }
+    }
+    
+    @JavascriptInterface
+    fun getSettingsContent(): String {
+        return try {
+            StorageManager.getFileContent(StorageManager.getSettingsFile()) ?: "{}"
+        } catch (e: Exception) {
+            "{\"error\": \"Error reading settings: ${e.message}\"}"
+        }
+    }
+    
+    @JavascriptInterface
+    fun getLogContent(): String {
+        return try {
+            Logger.getLogContents()
+        } catch (e: Exception) {
+            "Error reading logs: ${e.message}"
+        }
+    }
+    
+    @JavascriptInterface
+    fun getLogPaths(): String {
+        return try {
+            Logger.getLogFilePaths()
+        } catch (e: Exception) {
+            "Error getting log paths: ${e.message}"
+        }
+    }
+    
+    @JavascriptInterface
+    fun getExternalLogPath(): String? {
+        return try {
+            Logger.getExternalLogPath()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    @JavascriptInterface
+    fun listFiles(directory: String): String {
+        return try {
+            val dir = when (directory) {
+                "logs" -> StorageManager.getLogsDir()
+                "data" -> StorageManager.getDataDir()
+                "base" -> StorageManager.getBaseDir()
+                else -> StorageManager.getBaseDir()
+            }
+            
+            if (dir.exists() && dir.isDirectory) {
+                dir.listFiles()?.joinToString("\n") { file ->
+                    "${if (file.isDirectory) "DIR" else "FILE"}: ${file.name} (${file.length()} bytes)"
+                } ?: "No files"
+            } else {
+                "Directory not found: ${dir.absolutePath}"
+            }
+        } catch (e: Exception) {
+            "Error listing files: ${e.message}"
+        }
+    }
+}
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -39,9 +112,13 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    Logger.i("MainScreen", "MainScreen composing...")
+    
     // Collect settings
     val apiUrl by settingsRepository.apiUrl.collectAsState(initial = SettingsRepository.DEFAULT_API_URL)
     val pollInterval by settingsRepository.pollInterval.collectAsState(initial = SettingsRepository.DEFAULT_POLL_INTERVAL)
+    
+    Logger.d("MainScreen", "Settings collected: apiUrl=$apiUrl, pollInterval=$pollInterval")
     
     var status by remember { mutableStateOf("Unknown") }
     var isConnected by remember { mutableStateOf(false) }
@@ -62,15 +139,20 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     }
     
     fun refreshStatus(onComplete: (() -> Unit)? = null) {
+        Logger.d("MainScreen", "refreshStatus() called")
         scope.launch {
             isRefreshing = true
-            ApiClient.get("$apiUrl/api/status") { result ->
-                result.onSuccess {
-                    status = if (it.contains("running", ignoreCase = true)) "Running" else "Stopped"
+            val url = "$apiUrl/api/status"
+            Logger.d("MainScreen", "Making API call to: $url")
+            ApiClient.get(url) { result ->
+                result.onSuccess { response ->
+                    Logger.d("MainScreen", "API success: $response")
+                    status = if (response.contains("running", ignoreCase = true)) "Running" else "Stopped"
                     isConnected = true
                     consecutiveFailures = 0
                     lastError = null
                 }.onFailure { e ->
+                    Logger.w("MainScreen", "API failed: ${e.message}", e)
                     isConnected = false
                     consecutiveFailures++
                     lastError = e.message
@@ -80,20 +162,27 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                 }
                 isRefreshing = false
                 onComplete?.invoke()
+                Logger.d("MainScreen", "refreshStatus() completed")
             }
         }
     }
     
     // Initial load and polling
     LaunchedEffect(apiUrl, pollInterval) {
-        // Initial check
-        refreshStatus()
-        
-        // Status polling loop with smart retry
-        while (true) {
-            val delayMs = calculateRetryDelay()
-            delay(delayMs)
+        Logger.i("MainScreen", "LaunchedEffect triggered. Starting polling...")
+        try {
+            // Initial check
             refreshStatus()
+            
+            // Status polling loop with smart retry
+            while (true) {
+                val delayMs = calculateRetryDelay()
+                Logger.d("MainScreen", "Waiting ${delayMs}ms before next poll")
+                delay(delayMs)
+                refreshStatus()
+            }
+        } catch (e: Exception) {
+            Logger.e("MainScreen", "Exception in polling loop", e)
         }
     }
     
@@ -307,30 +396,46 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                webViewClient = object : WebViewClient() {
-                                    override fun onReceivedError(
-                                        view: WebView?,
-                                        errorCode: Int,
-                                        description: String?,
-                                        failingUrl: String?
-                                    ) {
-                                        // Suppress WebView errors - ttyd may not be running yet
-                                        // This prevents crashes when the local server is unavailable
-                                    }
-                                }
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.allowFileAccess = true
-                                loadUrl("http://127.0.0.1:7681")
-                            }
-                        },
+                      AndroidView(
+                          factory = { ctx ->
+                              Logger.i("MainScreen", "Creating WebView with file access")
+                              WebView(ctx).apply {
+                                  layoutParams = ViewGroup.LayoutParams(
+                                      ViewGroup.LayoutParams.MATCH_PARENT,
+                                      ViewGroup.LayoutParams.MATCH_PARENT
+                                  )
+                                  webViewClient = object : WebViewClient() {
+                                      override fun onReceivedError(
+                                          view: WebView?,
+                                          errorCode: Int,
+                                          description: String?,
+                                          failingUrl: String?
+                                      ) {
+                                          Logger.w("MainScreen", "WebView error: $errorCode - $description for $failingUrl")
+                                          // Suppress WebView errors - ttyd may not be running yet
+                                          // This prevents crashes when local server is unavailable
+                                      }
+                                  }
+                                  
+                                  // Enable file access for external storage
+                                  settings.javaScriptEnabled = true
+                                  settings.domStorageEnabled = true
+                                  settings.allowFileAccess = true
+                                  settings.allowContentAccess = true
+                                  settings.allowFileAccessFromFileURLs = true
+                                  settings.allowUniversalAccessFromFileURLs = true
+                                  
+                                  // Add JavaScript interface for file operations
+                                  addJavascriptInterface(FileInterface(context), "AndroidFileInterface")
+                                  
+                                  // Enable debug for development
+                                  WebView.setWebContentsDebuggingEnabled(true)
+                                  
+                                  val url = "http://127.0.0.1:7681"
+                                  Logger.i("MainScreen", "Loading WebView URL: $url with file access enabled")
+                                  loadUrl(url)
+                              }
+                          },
                         update = {
                             // Don't reload URL here - it causes constant reconnections
                             // The factory already loads the URL initially
