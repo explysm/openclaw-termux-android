@@ -293,7 +293,7 @@ fun SettingsScreen(navController: NavController, settingsRepository: SettingsRep
                         Spacer(modifier = Modifier.height(8.dp))
 
                         val logs = Logger.getLogContents()
-                        val logPath = Logger.getLogFilePath() ?: "Unknown path"
+                        val logPath = Logger.getLogFilePaths()
 
                         Text(
                             "Log file: $logPath",

@@ -429,9 +429,7 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                                   addJavascriptInterface(FileInterface(context), "AndroidFileInterface")
                                   
                                   // Enable debug for development
-                                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                                      setWebContentsDebuggingEnabled(true)
-                                  }
+                                  WebView.setWebContentsDebuggingEnabled(true)
                                   
                                   val url = "http://127.0.0.1:7681"
                                   Logger.i("MainScreen", "Loading WebView URL: $url with file access enabled")

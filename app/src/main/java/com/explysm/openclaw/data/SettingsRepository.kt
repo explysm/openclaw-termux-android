@@ -1,13 +1,6 @@
 package com.explysm.openclaw.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.explysm.openclaw.utils.Logger
 import com.explysm.openclaw.utils.StorageManager
 import kotlinx.coroutines.Dispatchers
@@ -15,10 +8,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isDispatched
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -28,20 +19,9 @@ import kotlinx.serialization.decodeFromString
 class SettingsRepository(private val context: Context) {
     
     companion object {
-        // Legacy DataStore keys (for migration only)
-        val API_URL = stringPreferencesKey("api_url")
-        val POLL_INTERVAL = intPreferencesKey("poll_interval")
-        val DARK_THEME = booleanPreferencesKey("dark_theme")
-        val AUTO_START = booleanPreferencesKey("auto_start")
-        val ENABLE_NOTIFICATIONS = booleanPreferencesKey("enable_notifications")
-        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
-        
         const val DEFAULT_API_URL = "http://127.0.0.1:5039"
         const val DEFAULT_POLL_INTERVAL = 10
     }
-    
-    // Legacy DataStore for migration only
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
     
     // New JSON-based settings
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -58,7 +38,7 @@ class SettingsRepository(private val context: Context) {
             val storageInitialized = StorageManager.initialize(context)
             Logger.i("SettingsRepository", "Storage initialization: $storageInitialized")
             
-            // Try to load from JSON file first
+            // Try to load from JSON file
             val settingsFile = StorageManager.getSettingsFile()
             val jsonContent = StorageManager.getFileContent(settingsFile)
             
@@ -68,14 +48,14 @@ class SettingsRepository(private val context: Context) {
                     _settings.value = loadedSettings
                     Logger.i("SettingsRepository", "Successfully loaded settings from JSON file: ${settingsFile.absolutePath}")
                 } catch (e: Exception) {
-                    Logger.w("SettingsRepository", "Failed to parse JSON settings, attempting migration", e)
-                    // Try migration from DataStore if JSON parsing fails
-                    migrateFromDataStore()
+                    Logger.e("SettingsRepository", "Failed to parse JSON settings, using defaults", e)
+                    _settings.value = SettingsData()
                 }
             } else {
-                Logger.i("SettingsRepository", "No JSON settings found, attempting migration from DataStore")
-                // Try migration if no JSON file exists
-                migrateFromDataStore()
+                Logger.i("SettingsRepository", "No JSON settings found, using defaults")
+                _settings.value = SettingsData()
+                // Save default settings to file
+                saveSettingsToFile(SettingsData())
             }
             
             Logger.i("SettingsRepository", "Final settings loaded: ${_settings.value}")
@@ -83,44 +63,6 @@ class SettingsRepository(private val context: Context) {
         } catch (e: Exception) {
             Logger.e("SettingsRepository", "Error loading settings, using defaults", e)
             _settings.value = SettingsData()
-        }
-    }
-    
-    private suspend fun migrateFromDataStore() {
-        try {
-            Logger.i("SettingsRepository", "Starting migration from DataStore")
-            
-            val migratedSettings = SettingsData(
-                apiUrl = getFromDataStore(context.dataStore.data.map { it[API_URL] ?: DEFAULT_API_URL }),
-                pollInterval = getFromDataStore(context.dataStore.data.map { it[POLL_INTERVAL] ?: DEFAULT_POLL_INTERVAL }),
-                darkTheme = getFromDataStore(context.dataStore.data.map { it[DARK_THEME] ?: false }),
-                autoStart = getFromDataStore(context.dataStore.data.map { it[AUTO_START] ?: false }),
-                enableNotifications = getFromDataStore(context.dataStore.data.map { it[ENABLE_NOTIFICATIONS] ?: true }),
-                onboardingCompleted = getFromDataStore(context.dataStore.data.map { it[ONBOARDING_COMPLETED] ?: false })
-            )
-            
-            _settings.value = migratedSettings
-            saveSettingsToFile(migratedSettings)
-            
-            // Clear DataStore after successful migration
-            context.dataStore.edit { it.clear() }
-            
-            Logger.i("SettingsRepository", "Successfully migrated from DataStore and cleared old data")
-            
-        } catch (e: Exception) {
-            Logger.e("SettingsRepository", "Migration from DataStore failed", e)
-        }
-    }
-    
-    private suspend fun <T> getFromDataStore(flow: Flow<T>): T {
-        return try {
-            // Collect first value from flow
-            kotlinx.coroutines.runBlocking {
-                flow.catch { emit(null) }.flowOn(Dispatchers.IO).collect { return@runBlocking it }
-            }
-        } catch (e: Exception) {
-            Logger.w("SettingsRepository", "Failed to get value from DataStore", e)
-            throw e
         }
     }
     
