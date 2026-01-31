@@ -17,18 +17,37 @@ object Logger {
         DEBUG, INFO, WARN, ERROR
     }
 
-    private var logFile: File? = null
-    private var writer: BufferedWriter? = null
+    private var internalLogFile: File? = null
+    private var internalWriter: BufferedWriter? = null
+    private var externalLogFile: File? = null
+    private var externalWriter: BufferedWriter? = null
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
     private val logQueue = ConcurrentLinkedQueue<String>()
     private val isWriting = AtomicBoolean(false)
+    private var externalStorageEnabled = false
 
     fun init(context: Context) {
         try {
-            val logsDir = File(context.filesDir, "logs").apply { mkdirs() }
-            logFile = File(logsDir, "app.log")
-            writer = BufferedWriter(FileWriter(logFile, true))
-            i("Logger", "Logger initialized. Log file: ${logFile?.absolutePath}")
+            // Initialize internal logging (fallback)
+            val internalLogsDir = File(context.filesDir, "logs").apply { mkdirs() }
+            internalLogFile = File(internalLogsDir, "app.log")
+            internalWriter = BufferedWriter(FileWriter(internalLogFile, true))
+            
+            // Initialize external logging (primary)
+            try {
+                externalStorageEnabled = StorageManager.initialize(context)
+                if (externalStorageEnabled) {
+                    val externalLogsDir = StorageManager.getLogsDir()
+                    externalLogFile = File(externalLogsDir, "app.log")
+                    externalWriter = BufferedWriter(FileWriter(externalLogFile, true))
+                    i("Logger", "External logging enabled at: ${externalLogFile?.absolutePath}")
+                }
+            } catch (e: Exception) {
+                w("Logger", "Failed to initialize external logging, using internal only", e)
+                externalStorageEnabled = false
+            }
+            
+            i("Logger", "Logger initialized. Internal: ${internalLogFile?.absolutePath}, External enabled: $externalStorageEnabled")
         } catch (e: Exception) {
             android.util.Log.e("OpenClawLogger", "Failed to initialize logger", e)
         }
@@ -82,9 +101,20 @@ object Logger {
             android.util.Log.e(tag, "Exception", it)
         }
 
-        // Write to file immediately with flush
+        // Write to files immediately with flush
         try {
-            writer?.let { w ->
+            // Write to external storage if available
+            externalWriter?.let { w ->
+                synchronized(w) {
+                    w.write(logLine)
+                    w.newLine()
+                    w.newLine()
+                    w.flush()
+                }
+            }
+            
+            // Also write to internal storage as backup
+            internalWriter?.let { w ->
                 synchronized(w) {
                     w.write(logLine)
                     w.newLine()
@@ -93,32 +123,101 @@ object Logger {
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("OpenClawLogger", "Failed to write to log file", e)
+            android.util.Log.e("OpenClawLogger", "Failed to write to log files", e)
         }
     }
 
     fun getLogContents(): String {
         return try {
-            writer?.flush()
-            logFile?.readText() ?: "Log file not available"
+            // Try external log first, fallback to internal
+            externalWriter?.flush()
+            internalWriter?.flush()
+            
+            val externalContent = externalLogFile?.readText()
+            val internalContent = internalLogFile?.readText()
+            
+            when {
+                externalContent != null && externalContent.isNotBlank() -> externalContent
+                internalContent != null && internalContent.isNotBlank() -> internalContent
+                else -> "Log files not available"
+            }
         } catch (e: Exception) {
             "Error reading log: ${e.message}"
         }
     }
 
-    fun getLogFilePath(): String? {
-        return logFile?.absolutePath
+    fun getLogFilePaths(): String {
+        return buildString {
+            appendLine("Log File Paths:")
+            if (externalStorageEnabled && externalLogFile != null) {
+                appendLine("External (Primary): ${externalLogFile?.absolutePath}")
+            } else {
+                appendLine("External: Not available")
+            }
+            appendLine("Internal (Backup): ${internalLogFile?.absolutePath}")
+        }
+    }
+
+    fun getExternalLogPath(): String? {
+        return if (externalStorageEnabled) externalLogFile?.absolutePath else null
+    }
+
+    fun getInternalLogPath(): String? {
+        return internalLogFile?.absolutePath
     }
 
     fun clearLogs() {
         try {
-            synchronized(writer ?: return) {
-                writer?.close()
-                logFile?.writeText("")
-                writer = BufferedWriter(FileWriter(logFile, true))
+            // Clear external log
+            synchronized(externalWriter ?: return) {
+                externalWriter?.close()
+                externalLogFile?.writeText("")
+                externalLogFile?.let { file ->
+                    externalWriter = BufferedWriter(FileWriter(file, true))
+                }
             }
+            
+            // Clear internal log
+            synchronized(internalWriter ?: return) {
+                internalWriter?.close()
+                internalLogFile?.writeText("")
+                internalLogFile?.let { file ->
+                    internalWriter = BufferedWriter(FileWriter(file, true))
+                }
+            }
+            
+            i("Logger", "All logs cleared")
         } catch (e: Exception) {
             android.util.Log.e("OpenClawLogger", "Failed to clear logs", e)
+        }
+    }
+
+    fun clearExternalLogs() {
+        try {
+            synchronized(externalWriter ?: return) {
+                externalWriter?.close()
+                externalLogFile?.writeText("")
+                externalLogFile?.let { file ->
+                    externalWriter = BufferedWriter(FileWriter(file, true))
+                }
+            }
+            i("Logger", "External logs cleared")
+        } catch (e: Exception) {
+            android.util.Log.e("OpenClawLogger", "Failed to clear external logs", e)
+        }
+    }
+
+    fun isExternalLoggingEnabled(): Boolean {
+        return externalStorageEnabled
+    }
+
+    fun getLoggerInfo(): String {
+        return buildString {
+            appendLine("Logger Information:")
+            appendLine("External Storage Enabled: $externalStorageEnabled")
+            appendLine(getLogFilePaths())
+            appendLine("Storage Available: ${StorageManager.isStorageAvailable()}")
+            appendLine("Storage Base Dir: ${StorageManager.getBaseDir().absolutePath}")
         }
     }
 }
