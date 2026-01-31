@@ -249,8 +249,9 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                 AndroidView(
                     factory = { ctx ->
                         WebView(ctx).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
+                            @SuppressLint("SetJavaScriptEnabled")
+                            this.settings.javaScriptEnabled = true
+                            this.settings.domStorageEnabled = true
                             webViewClient = WebViewClient()
                             loadUrl("http://127.0.0.1:7681")
                         }
