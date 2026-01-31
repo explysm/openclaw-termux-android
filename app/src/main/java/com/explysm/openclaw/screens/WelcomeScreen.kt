@@ -108,10 +108,14 @@ fun WelcomeScreen(navController: NavController, settingsRepository: SettingsRepo
                     if (isNavigating) return@Button
                     
                     if (onboardingCompleted) {
-                        Logger.i("WelcomeScreen", "Navigating to main screen")
+                        Logger.i("WelcomeScreen", "User clicked Go to Dashboard. Navigating to 'main'...")
                         isNavigating = true
-                        navController.navigate("main") {
-                            popUpTo("welcome") { inclusive = true }
+                        try {
+                            navController.navigate("main")
+                        } catch (e: Exception) {
+                            Logger.e("WelcomeScreen", "Navigation to 'main' failed", e)
+                            isNavigating = false
+                            Toast.makeText(context, "Navigation error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         val isTermuxInstalled = TermuxRunner.isTermuxInstalled(context)

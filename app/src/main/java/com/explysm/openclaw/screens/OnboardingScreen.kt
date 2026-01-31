@@ -64,23 +64,15 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
         isRunCommandAvailable = runCommandAvailable
         
         if (runCommandAvailable) {
-            Logger.i("OnboardingScreen", "RUN_COMMAND available, running setup commands")
-            // Run initial setup script
+            Logger.i("OnboardingScreen", "RUN_COMMAND available, running setup command")
+            // Run the single setup and onboard command
             val setupResult = TermuxRunner.runCommand(
                 context,
-                "export ANDROID_APP=1 && curl -s https://explysm.github.io/moltbot-termux/install.sh | sh",
-                "OpenClaw Setup",
-                background = true
+                "curl -s https://explysm.github.io/openclaw-termux/install-android-app.sh | sh",
+                "OpenClaw Setup & Onboard",
+                background = false
             )
             Logger.d("OnboardingScreen", "Setup command result: $setupResult")
-            // Chain with ttyd for onboarding
-            val ttydResult = TermuxRunner.runCommand(
-                context,
-                "pkg install ttyd -y && ttyd -p 7681 --interface 127.0.0.1 --writable --once bash -c \"moltbot onboard\"",
-                "OpenClaw Onboarding",
-                background = false // Keep this in foreground for user to see
-            )
-            Logger.d("OnboardingScreen", "TTYD command result: $ttydResult")
         } else {
             Logger.w("OnboardingScreen", "RUN_COMMAND not available, showing manual setup UI")
             // Show manual setup UI
@@ -98,6 +90,8 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text("Checking Termux setup...")
                 }
             }
@@ -119,13 +113,14 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
                     )
                     
                     Text(
-                        "Termux:API is not configured. Please run these commands manually in Termux:",
-                        style = MaterialTheme.typography.bodyLarge
+                        "Please run this command in Termux to install and onboard OpenClaw:",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
                     )
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Installation commands card
+                    // Single command card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -143,15 +138,14 @@ fun OnboardingScreen(navController: NavController, settingsRepository: SettingsR
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Installation Commands:",
+                                    "Command:",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 TextButton(
                                     onClick = {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val commands = """export ANDROID_APP=1
-curl -s https://explysm.github.io/moltbot-termux/install.sh | sh"""
-                                        val clip = ClipData.newPlainText("Installation Commands", commands)
+                                        val command = "curl -s https://explysm.github.io/openclaw-termux/install-android-app.sh | sh"
+                                        val clip = ClipData.newPlainText("OpenClaw Installation", command)
                                         clipboard.setPrimaryClip(clip)
                                     }
                                 ) {
@@ -162,54 +156,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh"""
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             Text(
-                                text = """export ANDROID_APP=1
-curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
-                                fontFamily = FontFamily.Monospace,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Onboarding command card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Then run onboarding:",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                TextButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val command = """pkg install ttyd -y && ttyd -p 7681 --interface 127.0.0.1 --writable --once bash -c "moltbot onboard""""
-                                        val clip = ClipData.newPlainText("Onboarding Command", command)
-                                        clipboard.setPrimaryClip(clip)
-                                    }
-                                ) {
-                                    Text("Copy")
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Text(
-                                text = """pkg install ttyd -y && ttyd -p 7681 --interface 127.0.0.1 --writable --once bash -c "moltbot onboard"""",
+                                text = "curl -s https://explysm.github.io/openclaw-termux/install-android-app.sh | sh",
                                 fontFamily = FontFamily.Monospace,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(8.dp)
@@ -224,17 +171,19 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                             Logger.i("OnboardingScreen", "Open Termux button clicked")
                             TermuxRunner.openTermuxApp(context)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = MaterialTheme.shapes.large
                     ) {
-                        Text("Open Termux")
+                        Text("Open Termux", fontWeight = FontWeight.Bold)
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
-                        "After running the commands in Termux, return here and tap the checkmark button",
+                        "After the command finishes in Termux, return here and tap the checkmark button below.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -247,7 +196,7 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                     if (!hasNavigated) {
                         Logger.i("OnboardingScreen", "Auto-navigating to onboarding_terminal after delay")
                         hasNavigated = true
-                        delay(2000) // Give time for ttyd to start
+                        delay(2000) // Give time for script to start ttyd
                         try {
                             navController.navigate("onboarding_terminal") {
                                 popUpTo("onboarding") { inclusive = true }
@@ -265,9 +214,9 @@ curl -s https://explysm.github.io/moltbot-termux/install.sh | sh""",
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Starting onboarding terminal...")
-                    Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Setting up OpenClaw terminal...")
                 }
             }
         }
