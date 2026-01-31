@@ -43,6 +43,7 @@ jobs:
           alias: ${{ secrets.KS_ALIAS }}
           keyStorePassword: ${{ secrets.KS_PASSWORD }}
           keyPassword: ${{ secrets.KS_PASSWORD }}
+          buildToolsVersion: "34.0.0"
         
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
