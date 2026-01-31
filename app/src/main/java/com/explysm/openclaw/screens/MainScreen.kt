@@ -1,12 +1,17 @@
 package com.explysm.openclaw.screens
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -14,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,10 +43,19 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     
     val apiUrl by settingsRepository.apiUrl.collectAsState(initial = SettingsRepository.DEFAULT_API_URL)
     val pollInterval by settingsRepository.pollInterval.collectAsState(initial = 10)
+    val settings by settingsRepository.settings.collectAsState()
     
     var status by remember { mutableStateOf("Unknown") }
     var isConnected by remember { mutableStateOf(true) }
     var lastError by remember { mutableStateOf<String?>(null) }
+    var showPostOnboardingDialog by remember { mutableStateOf(false) }
+    
+    // Check if we should show the post-onboarding dialog
+    LaunchedEffect(settings) {
+        if (settings.onboardingCompleted && !settings.postOnboardingHelpShown) {
+            showPostOnboardingDialog = true
+        }
+    }
     
     fun refreshStatus() {
         ApiClient.get("$apiUrl/api/status") { result ->
@@ -60,6 +76,73 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
             refreshStatus()
             delay(pollInterval * 1000L)
         }
+    }
+    
+    if (showPostOnboardingDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Setup Complete!") },
+            text = {
+                Column {
+                    Text("To start the OpenClaw API, please open Termux and run the following command:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    val command = "moltbot --android-app"
+                    
+                    // Code block
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = command,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Moltbot Command", command)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Command copied!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                // Simplified "Copy" text as icon isn't standard in M3 Icons
+                                Text("Copy", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    TermuxRunner.openTermuxApp(context)
+                }) {
+                    Text("Open Termux")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPostOnboardingDialog = false
+                    scope.launch {
+                        settingsRepository.setPostOnboardingHelpShown(true)
+                    }
+                }) {
+                    Text("Close")
+                }
+            }
+        )
     }
     
     Scaffold(
