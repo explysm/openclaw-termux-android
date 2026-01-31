@@ -8,6 +8,7 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -20,7 +21,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -334,7 +337,11 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(onClick = { refreshStatus() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Terminal", size(20.dp))
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh Terminal",
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
                 
