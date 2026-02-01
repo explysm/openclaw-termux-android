@@ -34,6 +34,7 @@ import com.explysm.openclaw.utils.ApiClient
 import com.explysm.openclaw.utils.Logger
 import com.explysm.openclaw.utils.StorageManager
 import com.explysm.openclaw.utils.TermuxRunner
+import com.explysm.openclaw.utils.UpdateChecker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -52,6 +53,15 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     var lastError by remember { mutableStateOf<String?>(null) }
     var showPostOnboardingDialog by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    
+    var updateInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
+    
+    // Check for updates
+    LaunchedEffect(Unit) {
+        UpdateChecker.checkForUpdates(context) { version, url ->
+            updateInfo = Pair(version, url)
+        }
+    }
     
     // Determine terminal URL from API URL
     val terminalUrl = remember(apiUrl) {
@@ -161,6 +171,29 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                     }
                 }) {
                     Text("Close")
+                }
+            }
+        )
+    }
+
+    if (updateInfo != null) {
+        AlertDialog(
+            onDismissRequest = { updateInfo = null },
+            title = { Text("Update Available") },
+            text = { Text("A new version (${updateInfo?.first}) of OpenClaw is available. Would you like to download it?") },
+            confirmButton = {
+                Button(onClick = {
+                    updateInfo?.second?.let { url ->
+                        UpdateChecker.openDownloadUrl(context, url)
+                    }
+                    updateInfo = null
+                }) {
+                    Text("Download")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { updateInfo = null }) {
+                    Text("Later")
                 }
             }
         )
@@ -293,10 +326,10 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                         WebView(ctx).apply {
                             webViewRef = this
                             @SuppressLint("SetJavaScriptEnabled")
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.allowFileAccess = true
-                            settings.setSupportZoom(false)
+                            this.settings.javaScriptEnabled = true
+                            this.settings.domStorageEnabled = true
+                            this.settings.allowFileAccess = true
+                            this.settings.setSupportZoom(false)
                             
                             webViewClient = object : WebViewClient() {
                                 override fun onPageFinished(view: WebView?, url: String?) {
