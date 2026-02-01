@@ -233,13 +233,15 @@ fun OnboardingTerminalScreen(navController: NavController, settingsRepository: S
                         settings.domStorageEnabled = true
                         settings.allowFileAccess = true
                         settings.setSupportZoom(false)
+                        setBackgroundColor(android.graphics.Color.BLACK)
                         Logger.i("OnboardingTerminalScreen", "Loading terminal URL: http://127.0.0.1:7681")
                         loadUrl("http://127.0.0.1:7681")
                     }
                 },
                 update = {
                     webViewRef.value = it
-                }
+                },
+                modifier = Modifier.fillMaxSize()
             )
             
             // Loading dialog
