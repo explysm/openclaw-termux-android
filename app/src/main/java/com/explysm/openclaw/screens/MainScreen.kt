@@ -14,12 +14,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +51,17 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     var isConnected by remember { mutableStateOf(true) }
     var lastError by remember { mutableStateOf<String?>(null) }
     var showPostOnboardingDialog by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    
+    // Determine terminal URL from API URL
+    val terminalUrl = remember(apiUrl) {
+        try {
+            val uri = android.net.Uri.parse(apiUrl)
+            "http://${uri.host ?: "127.0.0.1"}:7681"
+        } catch (e: Exception) {
+            "http://127.0.0.1:7681"
+        }
+    }
     
     // Check if we should show the post-onboarding dialog
     LaunchedEffect(settings) {
@@ -60,7 +73,15 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
     fun refreshStatus() {
         ApiClient.get("$apiUrl/api/status") { result ->
             result.onSuccess { response ->
-                status = if (response.contains("running", ignoreCase = true)) "Running" else "Stopped"
+                val newStatus = if (response.contains("running", ignoreCase = true)) "Running" else "Stopped"
+                if (status != "Running" && newStatus == "Running") {
+                    // Service just started, reload terminal
+                    scope.launch {
+                        delay(1500) // Give ttyd a moment to start
+                        webViewRef?.reload()
+                    }
+                }
+                status = newStatus
                 isConnected = true
                 lastError = null
             }.onFailure { e ->
@@ -208,6 +229,10 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
                         result.onSuccess { 
                             status = "Running"
                             isConnected = true
+                            scope.launch {
+                                delay(1500)
+                                webViewRef?.reload()
+                            }
                         }.onFailure { e ->
                             isConnected = false
                             lastError = e.message
@@ -241,20 +266,61 @@ fun MainScreen(navController: NavController, settingsRepository: SettingsReposit
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Text("Terminal:")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Terminal:", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { 
+                    Logger.i("MainScreen", "Manual terminal refresh requested")
+                    webViewRef?.reload() 
+                }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh Terminal")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
             
             Card(
-                modifier = Modifier.fillMaxWidth().height(400.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Black)
             ) {
                 AndroidView(
                     factory = { ctx ->
                         WebView(ctx).apply {
+                            webViewRef = this
                             @SuppressLint("SetJavaScriptEnabled")
-                            this.settings.javaScriptEnabled = true
-                            this.settings.domStorageEnabled = true
-                            webViewClient = WebViewClient()
-                            loadUrl("http://127.0.0.1:7681")
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.allowFileAccess = true
+                            settings.setSupportZoom(false)
+                            
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    Logger.d("MainScreen", "Terminal WebView finished loading: $url")
+                                }
+                                
+                                override fun onReceivedError(
+                                    view: WebView?,
+                                    errorCode: Int,
+                                    description: String?,
+                                    failingUrl: String?
+                                ) {
+                                    Logger.e("MainScreen", "Terminal WebView error: $errorCode - $description")
+                                }
+                            }
+                            
+                            setBackgroundColor(android.graphics.Color.BLACK)
+                            Logger.i("MainScreen", "Loading terminal URL: $terminalUrl")
+                            loadUrl(terminalUrl)
                         }
+                    },
+                    update = {
+                        webViewRef = it
                     },
                     modifier = Modifier.fillMaxSize()
                 )
